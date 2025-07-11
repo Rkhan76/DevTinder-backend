@@ -96,6 +96,7 @@ const userRegister = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body
 
+ 
   if (!email || !password) {
     return res.status(STATUS_CODES.BAD_REQUEST).json({
       success: false,
