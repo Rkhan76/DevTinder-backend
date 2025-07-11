@@ -1,5 +1,10 @@
 require('dotenv').config()
 const express = require('express')
+const swaggerUi = require('swagger-ui-express')
+const swaggerDocument = require('./swagger-output.json')
+
+
+
 const connectDB = require('./config/db')
 
 const app = express()
@@ -8,6 +13,7 @@ const mainRoutes = require('./routes/mainRoutes')
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 app.use('/', mainRoutes)
 
 
