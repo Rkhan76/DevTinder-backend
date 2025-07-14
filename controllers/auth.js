@@ -4,6 +4,7 @@ const hashPassword = require('../utils/hashedPassword')
 const STATUS_CODES = require('../utils/httpStatusCode')
 const matchPassword = require('../utils/passwordChecks')
 const { generateToken } = require('../utils/tokens')
+const axios = require('axios')
 
 const userRegister = async (req, res) => {
   const { email, password } = req.body
@@ -152,7 +153,93 @@ const login = async (req, res) => {
   }
 }
 
+
+const handleGoogleAuthCode = async (req, res) => {
+  console.log('🌐 Handling Google auth code')
+
+  const { code } = req.body
+  if (!code)
+    return res.status(STATUS_CODES.BAD_REQUEST).json({ error: 'Missing code' })
+
+  try {
+    // 1. Exchange auth code for tokens
+    const tokenResponse = await axios.post(
+      'https://oauth2.googleapis.com/token',
+      {
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: 'postmessage',
+        grant_type: 'authorization_code',
+      }
+    )
+
+    const { access_token, id_token } = tokenResponse.data
+
+    // 2. Get user info from Google
+    const userInfo = await axios.get(
+      'https://www.googleapis.com/oauth2/v3/userinfo',
+      {
+        headers: { Authorization: `Bearer ${access_token}` },
+      }
+    )
+
+    const { email, name, picture, sub } = userInfo.data
+    const normalizedEmail = validator.normalizeEmail(email)
+
+    // 3. Check if user exists
+    let user = await User.findOne({ email: normalizedEmail })
+
+    if (!user) {
+      // 4. Create new user
+      user = await User.create({
+        email: normalizedEmail,
+        name,
+        image: picture,
+        googleId: sub,
+        password: null,
+      })
+
+      console.log('✅ New user created:', user.email)
+    } else {
+      console.log('🔁 Existing user:', user.email)
+    }
+
+    // 5. Generate JWT token
+    const token = generateToken({
+      userId: user._id,
+      email: user.email,
+    })
+
+    // 6. Send response
+    return res.status(STATUS_CODES.OK).json({
+      success: true,
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        image: user.image,
+        createdAt: user.createdAt,
+      },
+    })
+  } catch (err) {
+    console.error(
+      '❌ Error in Google login:',
+      err.response?.data || err.message
+    )
+    return res.status(STATUS_CODES.SERVER_ERROR).json({
+      success: false,
+      message: 'Google login failed',
+      error: err.message,
+    })
+  }
+}
+
+
 module.exports = {
   userRegister,
   login,
+  handleGoogleAuthCode
 }
