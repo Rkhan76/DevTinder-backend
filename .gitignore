@@ -1,2 +1,80 @@
+# Node modules and dependencies
 node_modules/
-.env
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Environment variables
+.env*
+!.env.example
+.env.local
+.env.development
+.env.production
+.env.test
+.env.backup
+
+# Sensitive files and credentials
+*.key
+*.pem
+*.cert
+*.crt
+*.secret
+*.token
+*.pass
+config/credentials.json
+service-account.json
+firebase-admin.json
+oauth-credentials.json
+database-credentials.json
+aws-credentials.json
+
+# Logs and debug files
+logs/
+*.log
+*.log.*
+*.pid
+*.pid.*
+*.seed
+*.seed.*
+
+# Runtime data and cache
+tmp/
+*.tmp
+*.swp
+*.swo
+.DS_Store
+.idea/
+.vscode/
+*.code-workspace
+
+# Build and output directories
+dist/
+build/
+coverage/
+.nyc_output/
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+dump.rdb
+mongod.log
+
+# Session files
+*.session
+*.session.*
+
+# Uploads and media
+uploads/
+storage/
+media/
+
+# Testing
+junit.xml
+test-results.xml
+
+# Editor files
+*.swp
+*.swo
+*~
