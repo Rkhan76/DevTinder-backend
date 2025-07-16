@@ -3,8 +3,8 @@ const { userRegister, login, handleGoogleAuthCode } = require('../controllers/au
 
 const router = express.Router()
 
-router.post('/user-register', userRegister)
-router.post('/user-login', login)
-router.post('/user-google-login', handleGoogleAuthCode)
+router.post('/auth/register', userRegister)
+router.post('/auth/login', login)
+router.post('/auth/google', handleGoogleAuthCode)
 
 module.exports = router
