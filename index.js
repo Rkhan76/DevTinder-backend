@@ -1,6 +1,7 @@
 require('dotenv').config()
 const express = require('express')
 const cors = require('cors')
+const cookieParser = require('cookie-parser')
 const swaggerUi = require('swagger-ui-express')
 const swaggerDocument = require('./swagger-output.json')
 
@@ -18,6 +19,7 @@ app.use(
     credentials: true, // allow cookies
   })
 )
+app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))

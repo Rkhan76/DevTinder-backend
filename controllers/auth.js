@@ -3,7 +3,7 @@ const User = require('../schema/userSchema')
 const hashPassword = require('../utils/hashedPassword')
 const STATUS_CODES = require('../utils/httpStatusCode')
 const matchPassword = require('../utils/passwordChecks')
-const { generateToken } = require('../utils/tokens')
+const { generateToken, setTokenCookie } = require('../utils/tokens')
 const axios = require('axios')
 
 const userRegister = async (req, res) => {
@@ -97,7 +97,6 @@ const userRegister = async (req, res) => {
 const login = async (req, res) => {
   const { email, password } = req.body
 
- 
   if (!email || !password) {
     return res.status(STATUS_CODES.BAD_REQUEST).json({
       success: false,
@@ -105,7 +104,6 @@ const login = async (req, res) => {
     })
   }
 
-  // Email format validation
   if (!validator.isEmail(email)) {
     return res.status(STATUS_CODES.BAD_REQUEST).json({
       success: false,
@@ -115,40 +113,40 @@ const login = async (req, res) => {
 
   try {
     const user = await User.findOne({ email })
-
     if (!user) {
       return res.status(STATUS_CODES.NOT_FOUND).json({
         success: false,
-        message: 'User does not exists',
+        message: 'User does not exist',
       })
     }
-    console.log(typeof user, ' type of user of mongo')
-    // console.log(typeof user, ' type of user of mongo')
 
-    if (matchPassword(password, user.password)) {
-      const { password: _, ...safeUser } = user.toObject()
-
-      return res.status(STATUS_CODES.OK).json({
-        success: true,
-        message: 'You have successfully loggedIn',
-        data: {
-          user: safeUser,
-          token: generateToken(safeUser),
-        },
-      })
-    } else {
+    const isMatch = matchPassword(password, user.password)
+    if (!isMatch) {
       return res.status(STATUS_CODES.UNAUTHORIZED).json({
         success: false,
-        message: 'Please enter the valid credentials',
-       
+        message: 'Please enter valid credentials',
       })
     }
+
+    const { password: _, ...safeUser } = user.toObject()
+    const token = generateToken(safeUser)
+
+    // 🍪 Set HTTP-only cookie
+    setTokenCookie(res, token)
+
+    return res.status(STATUS_CODES.OK).json({
+      success: true,
+      message: 'Successfully logged in',
+      data: {
+        user: safeUser,
+      },
+    })
   } catch (err) {
-    console.log(err)
+    console.error(err)
     return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'There is something gone wrong with the server',
-      error: err,
+      message: 'Something went wrong on the server',
+      error: err.message,
     })
   }
 }
@@ -237,9 +235,26 @@ const handleGoogleAuthCode = async (req, res) => {
   }
 }
 
+const handleAuthCheck = (req, res) => {
+  console.log("auth chck comr")
+  res.status(200).json({ success: true, user: req.user })
+}
+
+const handleLogout = (req, res) => {
+  res.clearCookie('token', {
+    httpOnly: true,
+    secure: false, // set true in production with HTTPS
+    sameSite: 'lax',
+  })
+  return res.status(200).json({ success: true, message: 'Logged out successfully' })
+}
+
+
 
 module.exports = {
   userRegister,
   login,
-  handleGoogleAuthCode
+  handleGoogleAuthCode,
+  handleAuthCheck,
+  handleLogout,
 }
