@@ -17,7 +17,7 @@ const mediaSchema = new mongoose.Schema({
 
 const postSchema = new mongoose.Schema(
   {
-    userId: {
+    author: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,

@@ -1,6 +1,6 @@
 const express = require('express')
 const { userRegister, login, handleGoogleAuthCode, handleAuthCheck, handleLogout } = require('../controllers/auth')
-const { handleAddPost } = require('../controllers/post')
+const { handleAddPost, handleGetPost } = require('../controllers/post')
 const { authMiddleware } = require('../middleware/authMiddleware')
 
 const router = express.Router()
@@ -13,5 +13,6 @@ router.get('/auth/logout', authMiddleware, handleLogout)
 
 // add the post
 router.post('/post/add',authMiddleware, handleAddPost)
+router.get('/post/get',authMiddleware, handleGetPost)
 
 module.exports = router
