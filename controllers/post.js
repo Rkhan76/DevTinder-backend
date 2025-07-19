@@ -52,6 +52,8 @@ const handleGetPost = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10
     const skip = (page - 1) * limit
 
+    console.log("data be get from frontend ", page, limit, skip)
+
     const posts = await Post.find({author: userId})
       .sort({ createdAt: -1 }) // newest first
       .skip(skip)
@@ -59,6 +61,8 @@ const handleGetPost = async (req, res) => {
       .populate('author', '_id username profilePic') // populate if needed
       .lean()
 
+    console.log("post has been fetched from db ", posts)
+    
     res.status(STATUS_CODES.OK).json({
       success: true,
       data: posts,

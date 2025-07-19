@@ -13,6 +13,6 @@ router.get('/auth/logout', authMiddleware, handleLogout)
 
 // add the post
 router.post('/post/add',authMiddleware, handleAddPost)
-router.get('/post/get',authMiddleware, handleGetPost)
+router.get('/post/self',authMiddleware, handleGetPost)
 
 module.exports = router
