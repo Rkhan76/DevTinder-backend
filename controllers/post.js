@@ -7,12 +7,17 @@ const handleAddPost = async (req, res) => {
     const { content } = req.body
     const { userId } = req.user
 
+    console.log(userId)
+    console.log(content)
+
     if (!userId || !content) {
       return res.status(STATUS_CODES.BAD_REQUEST).json({
         success: false,
         message: 'Please provide valid input',
       })
     }
+
+     console.log('flow is here on add 1')
 
     // Sanitize the post content
     const safeContent = sanitizePostContent(content)
@@ -79,7 +84,50 @@ const handleGetPost = async (req, res) => {
   }
 }
 
+const handleGetAllPost = async (req, res) => {
+  try {
+    const { userId } = req.user
+
+    if (!userId) {
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({
+        success: false,
+        message: 'You are not authorized',
+      })
+    }
+
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limit) || 10
+    const skip = (page - 1) * limit
+
+    console.log('data be get from frontend ', page, limit, skip)
+
+    const posts = await Post.find({ author: { $ne: userId } })
+      .sort({ createdAt: -1 }) // newest first
+      .skip(skip)
+      .limit(limit)
+      .populate('author', '_id username profilePic') // populate if needed
+      .lean()
+
+    console.log('post has been fetched from db ', posts)
+
+    res.status(STATUS_CODES.OK).json({
+      success: true,
+      data: posts,
+      currentPage: page,
+      nextPage: posts.length === limit ? page + 1 : null,
+    })
+  } catch (err) {
+    console.error('Error fetching posts:', err.message)
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Something went wrong while fetching posts',
+      error: err.message,
+    })
+  }
+}
+
 module.exports = {
   handleAddPost,
   handleGetPost,
+  handleGetAllPost,
 }

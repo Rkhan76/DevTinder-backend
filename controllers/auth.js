@@ -129,7 +129,10 @@ const login = async (req, res) => {
     }
 
     const { password: _, ...safeUser } = user.toObject()
-    const token = generateToken(safeUser)
+    const token = generateToken({
+      userId: user._id,
+      email: user.email,
+    })
 
     // 🍪 Set HTTP-only cookie
     setTokenCookie(res, token)
