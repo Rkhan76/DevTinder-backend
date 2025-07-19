@@ -57,13 +57,12 @@ const handleGetPost = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10
     const skip = (page - 1) * limit
 
-    console.log("data be get from frontend ", page, limit, skip)
 
-    const posts = await Post.find({author: userId})
+    const posts = await Post.find({ author: userId })
       .sort({ createdAt: -1 }) // newest first
       .skip(skip)
       .limit(limit)
-      .populate('author', '_id username profilePic') // populate if needed
+      .populate('author', '_id email image fullName') // populate if needed
       .lean()
 
     console.log("post has been fetched from db ", posts)
@@ -126,8 +125,109 @@ const handleGetAllPost = async (req, res) => {
   }
 }
 
+const handleAddLikeOnPost = async (req, res) => {
+  try {
+    const { postId } = req.params
+    const { userId } = req.user
+
+    if (!postId || !userId) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Post ID and User ID are required',
+      })
+    }
+
+    const post = await Post.findById(postId)
+
+    if (!post) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: 'Post not found',
+      })
+    }
+
+    const hasLiked = post.likedBy.includes(userId)
+
+    if (hasLiked) {
+      // Unlike
+      post.likedBy.pull(userId)
+      post.likesCount -= 1
+    } else {
+      // Like
+      post.likedBy.push(userId)
+      post.likesCount += 1
+    }
+
+    await post.save()
+
+    return res.status(STATUS_CODES.OK).json({
+      success: true,
+      liked: !hasLiked,
+      likesCount: post.likesCount,
+    })
+  } catch (err) {
+    console.error('Error in liking post:', err)
+    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Something went wrong while liking the post',
+    })
+  }
+}
+
+
+const handleAddCommentOnPost = async (req, res) => {
+  try {
+    const { postId } = req.params
+    const { userId } = req.user
+    const { text } = req.body
+
+    if (!postId || !userId || !text) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Missing required fields',
+      })
+    }
+
+    const post = await Post.findById(postId)
+
+    if (!post) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: 'Post not found',
+      })
+    }
+
+    const newComment = {
+      user: userId,
+      text,
+    }
+
+    post.comments.push(newComment)
+    post.commentsCount += 1
+
+    await post.save()
+
+    return res.status(STATUS_CODES.OK).json({
+      success: true,
+      message: 'Comment added successfully',
+      comment: newComment,
+      commentsCount: post.commentsCount,
+    })
+  } catch (err) {
+    console.error('Error adding comment:', err)
+    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Something went wrong while adding the comment',
+    })
+  }
+}
+
+
 module.exports = {
   handleAddPost,
   handleGetPost,
   handleGetAllPost,
+  handleAddLikeOnPost,
+  handleAddCommentOnPost,
 }
+

@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema(
       unique: true,
       sparse: true, // Allows multiple null values
     },
-    name: {
+    fullName: {
       type: String,
     },
     image: {

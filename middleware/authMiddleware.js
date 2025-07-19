@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken')
 
 const authMiddleware = (req, res, next) => {
-  // console.log(req.cookies)
+  console.log("flow has reached to authmiddleware")
   const token = req.cookies.token
  
 

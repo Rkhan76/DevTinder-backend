@@ -1,3 +1,34 @@
 // Question for project
 
 1- what happen to the cookie when my server get down will the server side cookie will work after this event
+
+🧠 Problems Faced During the Project
+1️⃣ Pagination Inconsistency with Dynamic Data
+Problem:
+While using skip and limit-based pagination for the feed, I noticed that if a new post was added while a user was scrolling, that post might not appear in their feed due to index shifting. This made the pagination unreliable for dynamic content.
+
+Solution:
+I replaced skip-based pagination with cursor-based pagination, where the timestamp (or _id) of the last fetched post is used as a cursor. New posts don’t shift the window anymore, and every user sees a consistent and updated feed. This method also prevents duplicates or missing entries during scrolling.
+
+2️⃣ Client-Side Cookie Handling Issue
+Problem:
+During authentication and session handling, I faced issues where the client-side (browser) wasn’t storing or sending cookies properly. As a result, protected API routes failed with "Unauthorized" errors even though the user was logged in.
+
+Solution:
+I fixed this by configuring Axios to include credentials with every request:
+
+js
+Copy
+Edit
+axios.defaults.withCredentials = true;
+Also, I ensured that the backend was setting cookies with proper CORS and secure attributes:
+
+js
+Copy
+Edit
+res.cookie("token", token, {
+  httpOnly: true,
+  secure: true,
+  sameSite: "Lax", // or "None" if cross-site
+});
+Proper coordination between frontend and backend CORS, cookie settings, and ensuring the domain and path matched fixed the issue.

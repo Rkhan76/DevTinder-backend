@@ -5,12 +5,15 @@ const STATUS_CODES = require('../utils/httpStatusCode')
 const matchPassword = require('../utils/passwordChecks')
 const { generateToken, setTokenCookie } = require('../utils/tokens')
 const axios = require('axios')
+const { sanitizeFullname } = require('../utils/validateContent')
 
 const userRegister = async (req, res) => {
-  const { email, password } = req.body
+  const { fullName, email, password } = req.body
+
+  console.log('req.body:', req.body)
 
   // Input Validation
-  if (!email || !password) {
+  if (!email || !password || !fullName) {
     return res.status(STATUS_CODES.BAD_REQUEST).json({
       success: false,
       message: 'All fields are required',
@@ -33,7 +36,6 @@ const userRegister = async (req, res) => {
     })
   }
 
-  // Additional password strength checks (optional)
   if (
     !validator.isStrongPassword(password, {
       minLength: 8,
@@ -51,10 +53,13 @@ const userRegister = async (req, res) => {
   }
 
   try {
-    // Normalize email to lowercase to prevent duplicate accounts
+    // Normalize email
     const normalizedEmail = validator.normalizeEmail(email)
 
-    // Check if user already exists
+    // Sanitize fullName
+    const safeFullName = sanitizeFullname(fullName)
+
+    // Check for existing user
     const existingUser = await User.findOne({ email: normalizedEmail })
     if (existingUser) {
       return res.status(STATUS_CODES.CONFLICT).json({
@@ -70,9 +75,9 @@ const userRegister = async (req, res) => {
     const newUser = await User.create({
       email: normalizedEmail,
       password: hashedPassword,
+      fullName: safeFullName,
     })
 
-    // Omit password from response
     const userResponse = {
       _id: newUser._id,
       email: newUser.email,
@@ -93,6 +98,7 @@ const userRegister = async (req, res) => {
     })
   }
 }
+
 
 const login = async (req, res) => {
   const { email, password } = req.body
@@ -195,7 +201,7 @@ const handleGoogleAuthCode = async (req, res) => {
       // 4. Create new user
       user = await User.create({
         email: normalizedEmail,
-        name,
+        fullName: name,
         image: picture,
         googleId: sub,
         password: null,

@@ -15,6 +15,22 @@ const mediaSchema = new mongoose.Schema({
   },
 })
 
+const commentSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true,
+  },
+  text: {
+    type: String,
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+})
+
 const postSchema = new mongoose.Schema(
   {
     author: {
@@ -28,67 +44,72 @@ const postSchema = new mongoose.Schema(
       default: null,
     },
 
-    // media: {
-    //   type: [mediaSchema],
-    //   default: [],
-    // },
+    media: {
+      type: [mediaSchema],
+      default: [],
+    },
 
-    // tags: {
-    //   type: [String],
-    //   default: [],
-    // },
+    tags: {
+      type: [String],
+      default: [],
+    },
 
-    // mentions: {
-    //   type: [mongoose.Schema.Types.ObjectId], // referring to User IDs
-    //   ref: 'User',
-    //   default: [],
-    // },
+    mentions: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
+    },
 
-    // location: {
-    //   type: String,
-    //   default: null,
-    // },
+    location: {
+      type: String,
+      default: null,
+    },
 
-    // visibility: {
-    //   type: String,
-    //   enum: ['public', 'private', 'friends'],
-    //   default: 'public',
-    // },
+    visibility: {
+      type: String,
+      enum: ['public', 'private', 'friends'],
+      default: 'public',
+    },
 
-    // likesCount: {
-    //   type: Number,
-    //   default: 0,
-    // },
+    likesCount: {
+      type: Number,
+      default: 0,
+    },
 
-    // commentsCount: {
-    //   type: Number,
-    //   default: 0,
-    // },
+    commentsCount: {
+      type: Number,
+      default: 0,
+    },
 
-    // sharesCount: {
-    //   type: Number,
-    //   default: 0,
-    // },
+    sharesCount: {
+      type: Number,
+      default: 0,
+    },
 
     isEdited: {
       type: Boolean,
       default: false,
     },
 
-    // likedBy: {
-    //   type: [mongoose.Schema.Types.ObjectId],
-    //   ref: 'User',
-    //   default: [],
-    // },
+    likedBy: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
+    },
 
-    // bookmarkedBy: {
-    //   type: [mongoose.Schema.Types.ObjectId],
-    //   ref: 'User',
-    //   default: [],
-    // },
+    bookmarkedBy: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
+    },
+
+    comments: {
+      type: [commentSchema],
+      default: [],
+    },
   },
   {
-    timestamps: true, // adds createdAt and updatedAt automatically
+    timestamps: true,
   }
 )
 
