@@ -10,7 +10,7 @@ const { sanitizeFullname } = require('../utils/validateContent')
 const userRegister = async (req, res) => {
   const { fullName, email, password } = req.body
 
-  console.log('req.body:', req.body)
+  
 
   // Input Validation
   if (!email || !password || !fullName) {
@@ -212,25 +212,31 @@ const handleGoogleAuthCode = async (req, res) => {
       console.log('🔁 Existing user:', user.email)
     }
 
-    // 5. Generate JWT token
-    const token = generateToken({
-      userId: user._id,
-      email: user.email,
-    })
+  const token = generateToken({
+    userId: user._id,
+    email: user.email,
+  })
 
-    // 6. Send response
-    return res.status(STATUS_CODES.OK).json({
-      success: true,
-      message: 'Login successful',
-      token,
-      user: {
-        id: user._id,
-        email: user.email,
-        name: user.name,
-        image: user.image,
-        createdAt: user.createdAt,
-      },
-    })
+  // ✅ Set token as an HTTP-only cookie (secure in production)
+  res.cookie('token', token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production', // use HTTPS in production
+    sameSite: 'Strict',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+  })
+
+  // 6. Send response
+  return res.status(STATUS_CODES.OK).json({
+    success: true,
+    message: 'Login successful',
+    user: {
+      id: user._id,
+      email: user.email,
+      name: user.name,
+      image: user.image,
+      createdAt: user.createdAt,
+    },
+  })
   } catch (err) {
     console.error(
       '❌ Error in Google login:',
@@ -245,7 +251,6 @@ const handleGoogleAuthCode = async (req, res) => {
 }
 
 const handleAuthCheck = (req, res) => {
-  console.log("auth chck comr")
   res.status(200).json({ success: true, user: req.user })
 }
 

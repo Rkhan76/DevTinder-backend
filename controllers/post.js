@@ -7,9 +7,6 @@ const handleAddPost = async (req, res) => {
     const { content } = req.body
     const { userId } = req.user
 
-    console.log(userId)
-    console.log(content)
-
     if (!userId || !content) {
       return res.status(STATUS_CODES.BAD_REQUEST).json({
         success: false,
@@ -17,7 +14,6 @@ const handleAddPost = async (req, res) => {
       })
     }
 
-     console.log('flow is here on add 1')
 
     // Sanitize the post content
     const safeContent = sanitizePostContent(content)
@@ -63,9 +59,9 @@ const handleGetPost = async (req, res) => {
       .skip(skip)
       .limit(limit)
       .populate('author', '_id email image fullName') // populate if needed
+      .populate('likedBy', '_id fullName image')
       .lean()
 
-    console.log("post has been fetched from db ", posts)
     
     res.status(STATUS_CODES.OK).json({
       success: true,
@@ -98,16 +94,15 @@ const handleGetAllPost = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10
     const skip = (page - 1) * limit
 
-    console.log('data be get from frontend ', page, limit, skip)
 
     const posts = await Post.find({ author: { $ne: userId } })
       .sort({ createdAt: -1 }) // newest first
       .skip(skip)
       .limit(limit)
-      .populate('author', '_id username profilePic') // populate if needed
+      .populate('author', '_id email fullName image') // populate if needed
+      .populate('likedBy', '_id fullName image')
       .lean()
 
-    console.log('post has been fetched from db ', posts)
 
     res.status(STATUS_CODES.OK).json({
       success: true,
