@@ -1,6 +1,9 @@
 const STATUS_CODES = require('../utils/httpStatusCode')
 const { sanitizePostContent } = require('../utils/senatizePostContent')
 const Post = require('../schema/postSchema') 
+const cloudinary = require('../config/cloudinary')
+const uploadPostImage = require('../middleware/upload')
+const uploadToCloudinary = require('../utils/cloudinaryUploader')
 
 const handleAddPost = async (req, res) => {
   try {
@@ -14,14 +17,24 @@ const handleAddPost = async (req, res) => {
       })
     }
 
-
-    // Sanitize the post content
     const safeContent = sanitizePostContent(content)
+    const mediaFiles = req.files?.media || []
 
-    // Create the post directly using Mongoose create
+    const mediaArray = []
+
+    for (const file of mediaFiles) {
+      try {
+        const uploadedMedia = await uploadToCloudinary(file)
+        mediaArray.push(uploadedMedia)
+      } catch (uploadErr) {
+        console.error('Cloudinary upload error:', uploadErr)
+      }
+    }
+
     const newPost = await Post.create({
-      content: safeContent,
       author: userId,
+      content: safeContent,
+      media: mediaArray,
     })
 
     return res.status(STATUS_CODES.CREATED).json({
@@ -33,10 +46,11 @@ const handleAddPost = async (req, res) => {
     console.error('Error while creating post:', error)
     return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'Something went wrong while creating post',
+      message: 'Something went wrong while creating the post',
     })
   }
 }
+
 
 const handleGetPost = async (req, res) => {
   try {
