@@ -17,6 +17,8 @@ const mainRoutes = require('./routes/mainRoutes')
 const allowedOrigins = [
   'http://localhost:5173',
   'https://dev-tinder-frontend-git-main-rkhan76s-projects.vercel.app',
+  "https://dev-tinder-frontend-cv45i3dg5-rkhan76s-projects.vercel.app",
+
 ]
 
 app.use(
