@@ -46,8 +46,6 @@ app.get('/', (req, res) => {
     })
 })
 
-const PORT = process.env.PORT || 3000
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`)
-    console.log('\x1b[36m%s\x1b[0m', `👉  http://localhost:${PORT}`)
-})
+// Remove app.listen for Vercel compatibility
+// Export the app for serverless function handler
+module.exports = app
