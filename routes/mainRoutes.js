@@ -3,6 +3,8 @@ const { userRegister, login, handleGoogleAuthCode, handleAuthCheck, handleLogout
 const { handleAddPost, handleGetPost, handleGetAllPost, handleAddLikeOnPost, handleAddCommentOnPost } = require('../controllers/post')
 const { authMiddleware } = require('../middleware/authMiddleware')
 const {handleMediaUpload} = require('../middleware/upload')
+const ChatMessage = require('../schema/chatSchema');
+const { getChatHistory } = require('../controllers/chat');
 
 const router = express.Router()
 
@@ -19,6 +21,9 @@ router.get('/post/self',authMiddleware, handleGetPost)
 router.get('/post/all', authMiddleware, handleGetAllPost)
 router.patch('/post/:postId/like', authMiddleware, handleAddLikeOnPost)
 router.post('/post/:postId/comment', authMiddleware, handleAddCommentOnPost)
+
+// Add chat history endpoint
+router.get('/chat/:userId', authMiddleware, getChatHistory);
 
 
 module.exports = router

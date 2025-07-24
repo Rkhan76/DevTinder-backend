@@ -76,7 +76,7 @@ const handleGetPost = async (req, res) => {
       .populate('likedBy', '_id fullName image')
       .lean()
 
-    
+  
     res.status(STATUS_CODES.OK).json({
       success: true,
       data: posts,
@@ -117,7 +117,7 @@ const handleGetAllPost = async (req, res) => {
       .populate('likedBy', '_id fullName image')
       .lean()
 
-
+    console.log(posts);
     res.status(STATUS_CODES.OK).json({
       success: true,
       data: posts,

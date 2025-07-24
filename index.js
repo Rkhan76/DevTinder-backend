@@ -9,27 +9,16 @@ const swaggerDocument = require('./swagger-output.json')
 
 
 const connectDB = require('./config/db')
+const { initSocket } = require('./sockets/socket');
 
 const app = express()
 
 const mainRoutes = require('./routes/mainRoutes')
 
-const allowedOrigins = [
-  'http://localhost:5173',
-  'https://dev-tinder-frontend-git-main-rkhan76s-projects.vercel.app',
-  "https://dev-tinder-frontend-cv45i3dg5-rkhan76s-projects.vercel.app",
-
-]
-
+// Remove allowedOrigins and allow all origins for CORS
 app.use(
   cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true)
-      } else {
-        callback(new Error('Not allowed by CORS'))
-      }
-    },
+    origin: "*", // Allow all origins
     credentials: true, // Allow cookies and auth headers
   })
 )
@@ -48,6 +37,14 @@ app.get('/', (req, res) => {
     })
 })
 
-// Remove app.listen for Vercel compatibility
-// Export the app for serverless function handler
+// Only start the server and socket.io if this file is run directly (not required by Vercel)
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    const server = app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log('\x1b[36m%s\x1b[0m', `👉  http://localhost:${PORT}`);
+    });
+    initSocket(server);
+}
+
 module.exports = app
