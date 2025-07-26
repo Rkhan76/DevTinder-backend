@@ -230,7 +230,7 @@ const handleGoogleAuthCode = async (req, res) => {
     success: true,
     message: 'Login successful',
     user: {
-      id: user._id,
+      _id: user._id,
       email: user.email,
       name: user.name,
       image: user.image,

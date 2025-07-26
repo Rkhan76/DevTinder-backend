@@ -25,6 +25,10 @@ const userSchema = new mongoose.Schema(
     image: {
       type: String,
     },
+    connectons: {
+      type: Array,
+      default: [],
+    },
   },
   {
     timestamps: true,
