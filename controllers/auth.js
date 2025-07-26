@@ -217,13 +217,10 @@ const handleGoogleAuthCode = async (req, res) => {
     email: user.email,
   })
 
-  // ✅ Set token as an HTTP-only cookie (secure in production)
-  res.cookie('token', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production', // use HTTPS in production
-    sameSite: 'Strict',
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-  })
+  // 🍪 Set HTTP-only cookie
+  setTokenCookie(res, token)
+
+    
 
   // 6. Send response
   return res.status(STATUS_CODES.OK).json({

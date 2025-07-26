@@ -15,7 +15,6 @@ const getChatHistory = async (req, res) => {
       ],
     }).sort({ createdAt: 1 });
 
-    console.log(messages, " message has fetched here");
     res.status(200).json(messages);
   } catch (err) {
     res.status(500).json({ error: 'Failed to fetch chat history' });
