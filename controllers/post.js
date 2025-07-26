@@ -1,6 +1,6 @@
 const STATUS_CODES = require('../utils/httpStatusCode')
 const { sanitizePostContent } = require('../utils/senatizePostContent')
-const Post = require('../schema/postSchema') 
+const Post = require('../schema/postSchema')
 const cloudinary = require('../config/cloudinary')
 const uploadPostImage = require('../middleware/upload')
 const uploadToCloudinary = require('../utils/cloudinaryUploader')
@@ -51,24 +51,26 @@ const handleAddPost = async (req, res) => {
   }
 }
 
-
 const handleGetPost = async (req, res) => {
   try {
-    const { userId } = req.user
+    const { userId: authenticatedUserId } = req.user
+    const { userId: requestedUserId } = req.params
 
-    if (!userId) {
+    if (!authenticatedUserId) {
       return res.status(STATUS_CODES.UNAUTHORIZED).json({
         success: false,
         message: 'You are not authorized',
       })
     }
 
+    // Use requested userId if provided, otherwise use authenticated user's ID
+    const targetUserId = requestedUserId || authenticatedUserId
+
     const page = parseInt(req.query.page) || 1
     const limit = parseInt(req.query.limit) || 10
     const skip = (page - 1) * limit
 
-
-    const posts = await Post.find({ author: userId })
+    const posts = await Post.find({ author: targetUserId })
       .sort({ createdAt: -1 }) // newest first
       .skip(skip)
       .limit(limit)
@@ -76,7 +78,6 @@ const handleGetPost = async (req, res) => {
       .populate('likedBy', '_id fullName image')
       .lean()
 
-  
     res.status(STATUS_CODES.OK).json({
       success: true,
       data: posts,
@@ -108,7 +109,6 @@ const handleGetAllPost = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10
     const skip = (page - 1) * limit
 
-
     const posts = await Post.find({ author: { $ne: userId } })
       .sort({ createdAt: -1 }) // newest first
       .skip(skip)
@@ -117,7 +117,7 @@ const handleGetAllPost = async (req, res) => {
       .populate('likedBy', '_id fullName image')
       .lean()
 
-    console.log(posts);
+    console.log(posts)
     res.status(STATUS_CODES.OK).json({
       success: true,
       data: posts,
@@ -183,7 +183,6 @@ const handleAddLikeOnPost = async (req, res) => {
   }
 }
 
-
 const handleAddCommentOnPost = async (req, res) => {
   try {
     const { postId } = req.params
@@ -231,9 +230,6 @@ const handleAddCommentOnPost = async (req, res) => {
   }
 }
 
-
-
-
 module.exports = {
   handleAddPost,
   handleGetPost,
@@ -241,4 +237,3 @@ module.exports = {
   handleAddLikeOnPost,
   handleAddCommentOnPost,
 }
-
