@@ -220,20 +220,13 @@ const handleGoogleAuthCode = async (req, res) => {
   // 🍪 Set HTTP-only cookie
   setTokenCookie(res, token)
 
-    
+  const { password, googleId, ...safeUser } = user.toObject()
 
   // 6. Send response
   return res.status(STATUS_CODES.OK).json({
     success: true,
     message: 'Login successful',
-    user: {
-      _id: user._id,
-      email: user.email,
-      name: user.name,
-      image: user.image,
-      fullName: user.fullName,
-      createdAt: user.createdAt,
-    },
+    user: safeUser,
   })
   } catch (err) {
     console.error(

@@ -13,7 +13,10 @@ const {
   handleAddLikeOnPost,
   handleAddCommentOnPost,
 } = require('../controllers/post')
-const { authMiddleware } = require('../middleware/authMiddleware')
+const {
+  authMiddleware,
+  adminMiddleware,
+} = require('../middleware/authMiddleware')
 const { handleMediaUpload } = require('../middleware/upload')
 const ChatMessage = require('../schema/chatSchema')
 const { getChatHistory } = require('../controllers/chat')
@@ -22,6 +25,15 @@ const {
   handleUserSearch,
   handleGetUserById,
   handleAddFriend,
+  handleAcceptFriendRequest,
+  handleRejectFriendRequest,
+  handleCancelFriendRequest,
+  handleGetFriendRequests,
+  handleCreateUser,
+  handleUpdateUser,
+  handleDeleteUser,
+  handleDeleteOwnProfile,
+  handleGetAllUsersAdmin,
 } = require('../controllers/user')
 
 const router = express.Router()
@@ -49,6 +61,29 @@ router.get('/user/search', authMiddleware, handleUserSearch)
 router.get('/user/all', authMiddleware, handleGetAllUsers)
 router.get('/user/:userId', authMiddleware, handleGetUserById)
 router.post('/user/add-friend/:userId', authMiddleware, handleAddFriend)
+router.post(
+  '/user/accept-friend-request/:userId',
+  authMiddleware,
+  handleAcceptFriendRequest
+)
+router.post(
+  '/user/reject-friend-request/:userId',
+  authMiddleware,
+  handleRejectFriendRequest
+)
+router.post(
+  '/user/cancel-friend-request/:userId',
+  authMiddleware,
+  handleCancelFriendRequest
+)
+router.get('/user/friend-requests', authMiddleware, handleGetFriendRequests)
+router.delete('/user/profile', authMiddleware, handleDeleteOwnProfile)
+
+// admin routes
+router.get('/admin/users', adminMiddleware, handleGetAllUsersAdmin)
+router.post('/admin/users', adminMiddleware, handleCreateUser)
+router.put('/admin/users/:userId', adminMiddleware, handleUpdateUser)
+router.delete('/admin/users/:userId', adminMiddleware, handleDeleteUser)
 
 // Add chat history endpoint
 router.get('/chat/:userId', authMiddleware, getChatHistory)

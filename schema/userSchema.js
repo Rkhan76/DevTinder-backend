@@ -25,8 +25,28 @@ const userSchema = new mongoose.Schema(
     image: {
       type: String,
     },
-    connectons: {
-      type: Array,
+    role: {
+      type: String,
+      enum: ['user', 'admin'],
+      default: 'user',
+    },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    connections: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
+    },
+    sentFriendRequests: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
+    },
+    receivedFriendRequests: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'User',
       default: [],
     },
   },
@@ -34,6 +54,60 @@ const userSchema = new mongoose.Schema(
     timestamps: true,
   }
 )
+
+// Pre-remove middleware to handle cascading deletes
+userSchema.pre('remove', async function (next) {
+  try {
+    const Post = mongoose.model('Post')
+    const ChatMessage = mongoose.model('ChatMessage')
+
+    // Delete all posts by this user
+    await Post.deleteMany({ author: this._id })
+
+    // Delete all chat messages where this user is sender or receiver
+    await ChatMessage.deleteMany({
+      $or: [{ sender: this._id }, { receiver: this._id }],
+    })
+
+    // Remove this user from other users' connections and friend requests
+    await mongoose.model('User').updateMany(
+      {},
+      {
+        $pull: {
+          connections: this._id,
+          sentFriendRequests: this._id,
+          receivedFriendRequests: this._id,
+        },
+      }
+    )
+
+    // Remove this user from posts' likedBy and bookmarkedBy arrays
+    await Post.updateMany(
+      {},
+      {
+        $pull: {
+          likedBy: this._id,
+          bookmarkedBy: this._id,
+          mentions: this._id,
+        },
+      }
+    )
+
+    // Remove comments by this user from posts
+    await Post.updateMany(
+      { 'comments.user': this._id },
+      {
+        $pull: {
+          comments: { user: this._id },
+        },
+      }
+    )
+
+    next()
+  } catch (error) {
+    next(error)
+  }
+})
 
 const User = mongoose.model('User', userSchema)
 
