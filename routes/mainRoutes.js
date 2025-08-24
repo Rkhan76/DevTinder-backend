@@ -81,9 +81,13 @@ router.get('/user/:userId', authMiddleware, handleGetUserById)
 
 router.post('/user/add-friend/:userId', authMiddleware, handleSendFriendRequest)
 
-
+// api for accept the friend requet
 router.post('/user/accept-friend-request/:userId', authMiddleware, handleAcceptFriendRequest)
+
+// api for reject the friend request by a user
 router.post('/user/reject-friend-request/:userId', authMiddleware, handleRejectFriendRequest )
+
+// api for cancel a friend request
 router.post('/user/cancel-friend-request/:userId', authMiddleware, handleCancelFriendRequest)
 
 router.delete('/user/profile', authMiddleware, handleDeleteOwnProfile)

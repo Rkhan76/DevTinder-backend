@@ -305,7 +305,7 @@ const handleRejectFriendRequest = async (req, res) => {
   }
 }
 
-// cancel friend request api function
+// cancel friend request api function i.e "I regret sending you the request, so I’m cancelling it."
 const handleCancelFriendRequest = async (req, res) => {
   try {
     const { userId: authenticatedUserId } = req.user
