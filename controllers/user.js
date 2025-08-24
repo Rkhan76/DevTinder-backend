@@ -81,328 +81,9 @@ const handleGetUserById = async (req, res) => {
   }
 }
 
-// send friend request api function
-const handleAddFriend = async (req, res) => {
-  try {
-    const { userId: authenticatedUserId } = req.user
-    const { userId: targetUserId } = req.params
 
-    if (!authenticatedUserId) {
-      return res.status(STATUS_CODES.UNAUTHORIZED).json({
-        success: false,
-        message: 'You are not authorized',
-      })
-    }
 
-    if (!targetUserId) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({
-        success: false,
-        message: 'Target user ID is required',
-      })
-    }
 
-    // Prevent sending request to yourself
-    if (authenticatedUserId === targetUserId) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({
-        success: false,
-        message: 'You cannot send friend request to yourself',
-      })
-    }
-
-    // Check if target user exists
-    const targetUser = await User.findById(targetUserId)
-    if (!targetUser) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({
-        success: false,
-        message: 'Target user not found',
-      })
-    }
-
-    // Get current user
-    const currentUser = await User.findById(authenticatedUserId)
-    if (!currentUser) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({
-        success: false,
-        message: 'Current user not found',
-      })
-    }
-
-    // Check if already friends
-    if (currentUser.connections.includes(targetUserId)) {
-      return res.status(STATUS_CODES.CONFLICT).json({
-        success: false,
-        message: 'Already friends with this user',
-      })
-    }
-
-    // Check if friend request already sent
-    if (currentUser.sentFriendRequests.includes(targetUserId)) {
-      return res.status(STATUS_CODES.CONFLICT).json({
-        success: false,
-        message: 'Friend request already sent',
-      })
-    }
-
-    // Check if friend request already received
-    if (currentUser.receivedFriendRequests.includes(targetUserId)) {
-      return res.status(STATUS_CODES.CONFLICT).json({
-        success: false,
-        message: 'Friend request already received from this user',
-      })
-    }
-
-    // Send friend request
-    currentUser.sentFriendRequests.push(targetUserId)
-    targetUser.receivedFriendRequests.push(authenticatedUserId)
-
-    await currentUser.save()
-    await targetUser.save()
-
-    return res.status(STATUS_CODES.OK).json({
-      success: true,
-      message: 'Friend request sent successfully',
-    })
-  } catch (error) {
-    console.error('Error sending friend request:', error)
-    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: 'Error sending friend request',
-    })
-  }
-}
-
-// accept friend request api function
-const handleAcceptFriendRequest = async (req, res) => {
-  try {
-    const { userId: authenticatedUserId } = req.user
-    const { userId: requesterId } = req.params
-
-    if (!authenticatedUserId) {
-      return res.status(STATUS_CODES.UNAUTHORIZED).json({
-        success: false,
-        message: 'You are not authorized',
-      })
-    }
-
-    if (!requesterId) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({
-        success: false,
-        message: 'Requester ID is required',
-      })
-    }
-
-    // Get current user and requester
-    const currentUser = await User.findById(authenticatedUserId)
-    const requester = await User.findById(requesterId)
-
-    if (!currentUser || !requester) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({
-        success: false,
-        message: 'User not found',
-      })
-    }
-
-    // Check if friend request exists
-    if (!currentUser.receivedFriendRequests.includes(requesterId)) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({
-        success: false,
-        message: 'Friend request not found',
-      })
-    }
-
-    // Add to connections for both users
-    currentUser.connections.push(requesterId)
-    requester.connections.push(authenticatedUserId)
-
-    // Remove from friend requests
-    currentUser.receivedFriendRequests =
-      currentUser.receivedFriendRequests.filter(
-        (id) => id.toString() !== requesterId
-      )
-    requester.sentFriendRequests = requester.sentFriendRequests.filter(
-      (id) => id.toString() !== authenticatedUserId
-    )
-
-    await currentUser.save()
-    await requester.save()
-
-    return res.status(STATUS_CODES.OK).json({
-      success: true,
-      message: 'Friend request accepted successfully',
-    })
-  } catch (error) {
-    console.error('Error accepting friend request:', error)
-    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: 'Error accepting friend request',
-    })
-  }
-}
-
-// reject friend request api function
-const handleRejectFriendRequest = async (req, res) => {
-  try {
-    const { userId: authenticatedUserId } = req.user
-    const { userId: requesterId } = req.params
-
-    if (!authenticatedUserId) {
-      return res.status(STATUS_CODES.UNAUTHORIZED).json({
-        success: false,
-        message: 'You are not authorized',
-      })
-    }
-
-    if (!requesterId) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({
-        success: false,
-        message: 'Requester ID is required',
-      })
-    }
-
-    // Get current user and requester
-    const currentUser = await User.findById(authenticatedUserId)
-    const requester = await User.findById(requesterId)
-
-    if (!currentUser || !requester) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({
-        success: false,
-        message: 'User not found',
-      })
-    }
-
-    // Check if friend request exists
-    if (!currentUser.receivedFriendRequests.includes(requesterId)) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({
-        success: false,
-        message: 'Friend request not found',
-      })
-    }
-
-    // Remove from friend requests
-    currentUser.receivedFriendRequests =
-      currentUser.receivedFriendRequests.filter(
-        (id) => id.toString() !== requesterId
-      )
-    requester.sentFriendRequests = requester.sentFriendRequests.filter(
-      (id) => id.toString() !== authenticatedUserId
-    )
-
-    await currentUser.save()
-    await requester.save()
-
-    return res.status(STATUS_CODES.OK).json({
-      success: true,
-      message: 'Friend request rejected successfully',
-    })
-  } catch (error) {
-    console.error('Error rejecting friend request:', error)
-    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: 'Error rejecting friend request',
-    })
-  }
-}
-
-// cancel friend request api function
-const handleCancelFriendRequest = async (req, res) => {
-  try {
-    const { userId: authenticatedUserId } = req.user
-    const { userId: targetUserId } = req.params
-
-    if (!authenticatedUserId) {
-      return res.status(STATUS_CODES.UNAUTHORIZED).json({
-        success: false,
-        message: 'You are not authorized',
-      })
-    }
-
-    if (!targetUserId) {
-      return res.status(STATUS_CODES.BAD_REQUEST).json({
-        success: false,
-        message: 'Target user ID is required',
-      })
-    }
-
-    // Get current user and target user
-    const currentUser = await User.findById(authenticatedUserId)
-    const targetUser = await User.findById(targetUserId)
-
-    if (!currentUser || !targetUser) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({
-        success: false,
-        message: 'User not found',
-      })
-    }
-
-    // Check if friend request was sent
-    if (!currentUser.sentFriendRequests.includes(targetUserId)) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({
-        success: false,
-        message: 'Friend request not found',
-      })
-    }
-
-    // Remove from friend requests
-    currentUser.sentFriendRequests = currentUser.sentFriendRequests.filter(
-      (id) => id.toString() !== targetUserId
-    )
-    targetUser.receivedFriendRequests =
-      targetUser.receivedFriendRequests.filter(
-        (id) => id.toString() !== authenticatedUserId
-      )
-
-    await currentUser.save()
-    await targetUser.save()
-
-    return res.status(STATUS_CODES.OK).json({
-      success: true,
-      message: 'Friend request cancelled successfully',
-    })
-  } catch (error) {
-    console.error('Error cancelling friend request:', error)
-    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: 'Error cancelling friend request',
-    })
-  }
-}
-
-// get friend requests api function
-const handleGetFriendRequests = async (req, res) => {
-  try {
-    const { userId: authenticatedUserId } = req.user
-
-    if (!authenticatedUserId) {
-      return res.status(STATUS_CODES.UNAUTHORIZED).json({
-        success: false,
-        message: 'You are not authorized',
-      })
-    }
-
-    const currentUser = await User.findById(authenticatedUserId)
-      .populate('receivedFriendRequests', '_id fullName image email')
-      .populate('sentFriendRequests', '_id fullName image email')
-
-    if (!currentUser) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({
-        success: false,
-        message: 'User not found',
-      })
-    }
-
-    return res.status(STATUS_CODES.OK).json({
-      success: true,
-      receivedRequests: currentUser.receivedFriendRequests,
-      sentRequests: currentUser.sentFriendRequests,
-    })
-  } catch (error) {
-    console.error('Error getting friend requests:', error)
-    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: 'Error getting friend requests',
-    })
-  }
-}
 
 // Admin: Create user
 const handleCreateUser = async (req, res) => {
@@ -630,18 +311,62 @@ const handleGetAllUsersAdmin = async (req, res) => {
   }
 }
 
+// update the user about section
+const updateAboutSection = async (req, res) => {
+  try {
+    const {userId} = req.user 
+    const {
+      bio,
+      currentRole,
+      currentCompany,
+      skills,
+      experience,
+      education,
+      location,
+      interests,
+    } = req.body
+
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        bio,
+        currentRole,
+        currentCompany,
+        skills,
+        experience,
+        education,
+        location,
+        interests,
+      },
+      { new: true, runValidators: true }
+    ).select('-password') // exclude sensitive fields
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: 'User not found' })
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated successfully',
+      user: updatedUser,
+    })
+  } catch (error) {
+    console.error('Error updating profile:', error)
+    res.status(500).json({
+      success: false,
+      message: 'Something went wrong while updating profile',
+    })
+  }
+}
+
 module.exports = {
   handleGetAllUsers,
   handleUserSearch,
   handleGetUserById,
-  handleAddFriend,
-  handleAcceptFriendRequest,
-  handleRejectFriendRequest,
-  handleCancelFriendRequest,
-  handleGetFriendRequests,
   handleCreateUser,
   handleUpdateUser,
   handleDeleteUser,
   handleDeleteOwnProfile,
   handleGetAllUsersAdmin,
+  updateAboutSection,
 }

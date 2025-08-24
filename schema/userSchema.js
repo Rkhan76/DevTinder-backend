@@ -49,6 +49,41 @@ const userSchema = new mongoose.Schema(
       ref: 'User',
       default: [],
     },
+
+    // ✅ New Profile Fields
+    bio: {
+      type: String,
+      default: '',
+      maxlength: 500,
+    },
+    currentCompany: {
+      type: String,
+      default: '',
+    },
+    currentRole: {
+      type: String,
+      default: '',
+    },
+    skills: {
+      type: [String],
+      default: [],
+    },
+    experience: {
+      type: String,
+      default: '',
+    },
+    education: {
+      type: String,
+      default: '',
+    },
+    location: {
+      type: String,
+      default: '',
+    },
+    interests: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,

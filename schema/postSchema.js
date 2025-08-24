@@ -96,6 +96,11 @@ const postSchema = new mongoose.Schema(
       ref: 'User',
       default: [],
     },
+    repost: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Post', 
+      default: null,
+    },
 
     bookmarkedBy: {
       type: [mongoose.Schema.Types.ObjectId],

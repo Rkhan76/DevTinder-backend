@@ -1,6 +1,7 @@
 const STATUS_CODES = require('../utils/httpStatusCode')
 const { sanitizePostContent } = require('../utils/senatizePostContent')
 const Post = require('../schema/postSchema')
+const User = require('../schema/userSchema')
 const cloudinary = require('../config/cloudinary')
 const uploadPostImage = require('../middleware/upload')
 const uploadToCloudinary = require('../utils/cloudinaryUploader')
@@ -74,9 +75,16 @@ const handleGetPost = async (req, res) => {
       .sort({ createdAt: -1 }) // newest first
       .skip(skip)
       .limit(limit)
-      .populate('author', '_id email image fullName') // populate if needed
-      .populate('likedBy', '_id fullName image')
-      .lean()
+      .populate('author', '_id email image fullName') // populate author details
+      .populate('likedBy', '_id fullName image') // populate liked by users
+      .populate({
+        path: 'comments',
+        populate: {
+          path: 'user',
+          model: 'User',
+          select: '_id email fullName image'
+        }
+      })
 
     res.status(STATUS_CODES.OK).json({
       success: true,
@@ -105,9 +113,14 @@ const handleGetAllPost = async (req, res) => {
       })
     }
 
+   
+
     const page = parseInt(req.query.page) || 1
     const limit = parseInt(req.query.limit) || 10
     const skip = (page - 1) * limit
+
+ console.log('Fetching all posts for user:', userId)
+    console.log(`Fetching posts for page ${page} with limit ${limit} and skip ${skip}`)
 
     const posts = await Post.find({ author: { $ne: userId } })
       .sort({ createdAt: -1 }) // newest first
@@ -115,6 +128,11 @@ const handleGetAllPost = async (req, res) => {
       .limit(limit)
       .populate('author', '_id email fullName image') // populate if needed
       .populate('likedBy', '_id fullName image')
+      .populate({
+        path: 'comments.user',
+        select: '_id email fullName image', // include all necessary user fields
+        model: 'User',
+      })
       .lean()
 
     console.log(posts)
@@ -186,7 +204,7 @@ const handleAddLikeOnPost = async (req, res) => {
 const handleAddCommentOnPost = async (req, res) => {
   try {
     const { postId } = req.params
-    const { userId } = req.user
+    const { userId } = req.user // assuming req.user is set from auth middleware
     const { text } = req.body
 
     if (!postId || !userId || !text) {
@@ -205,20 +223,32 @@ const handleAddCommentOnPost = async (req, res) => {
       })
     }
 
+    // Create new comment subdocument
     const newComment = {
       user: userId,
       text,
+      createdAt: new Date(),
     }
 
+    // Push comment & update count
     post.comments.push(newComment)
     post.commentsCount += 1
 
+    // Save post
     await post.save()
+
+    // Fetch user details for immediate return
+    const user = await User.findById(userId).select('_id fullName image')
 
     return res.status(STATUS_CODES.OK).json({
       success: true,
       message: 'Comment added successfully',
-      comment: newComment,
+      comment: {
+        _id: post.comments[post.comments.length - 1]._id,
+        text: newComment.text,
+        createdAt: newComment.createdAt,
+        user, // populated user details
+      },
       commentsCount: post.commentsCount,
     })
   } catch (err) {
@@ -230,10 +260,83 @@ const handleAddCommentOnPost = async (req, res) => {
   }
 }
 
+const handleRepostsByUser = async (req, res) => {
+  const { postId } = req.params
+  const { userId } = req.user // from auth middleware
+
+  if (!postId || !userId) {
+    return res.status(STATUS_CODES.BAD_REQUEST).json({
+      success: false,
+      message: 'Post ID and User ID are required',
+    })
+  }
+
+  try {
+    // Find the original post
+    const originalPost = await Post.findById(postId)
+    if (!originalPost) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: 'Post not found',
+      })
+    }
+
+    // Prevent reposting own post
+    if (String(originalPost.author) === String(userId)) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'You cannot repost your own post',
+      })
+    }
+
+    // Check if user already reposted this post
+    const existingRepost = await Post.findOne({
+      author: userId,
+      repost: postId,
+    })
+
+    if (existingRepost) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'You already reposted this post',
+      })
+    }
+
+    // Create a new post that references the original
+    const repost = new Post({
+      author: userId,
+      repost: postId,
+      visibility: originalPost.visibility,
+      tags: originalPost.tags,
+      mentions: originalPost.mentions,
+    })
+
+    await repost.save()
+
+    // Increment shares count on original post
+    originalPost.sharesCount += 1
+    await originalPost.save()
+
+    return res.status(STATUS_CODES.CREATED).json({
+      success: true,
+      message: 'Post reposted successfully',
+      repost,
+    })
+  } catch (error) {
+    console.error(error)
+    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Server error while reposting',
+    })
+  }
+}
+
+
 module.exports = {
   handleAddPost,
   handleGetPost,
   handleGetAllPost,
   handleAddLikeOnPost,
   handleAddCommentOnPost,
+  handleRepostsByUser,
 }

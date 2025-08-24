@@ -12,6 +12,7 @@ const {
   handleGetAllPost,
   handleAddLikeOnPost,
   handleAddCommentOnPost,
+  handleRepostsByUser,
 } = require('../controllers/post')
 const {
   authMiddleware,
@@ -24,17 +25,21 @@ const {
   handleGetAllUsers,
   handleUserSearch,
   handleGetUserById,
-  handleAddFriend,
-  handleAcceptFriendRequest,
-  handleRejectFriendRequest,
-  handleCancelFriendRequest,
-  handleGetFriendRequests,
   handleCreateUser,
   handleUpdateUser,
   handleDeleteUser,
   handleDeleteOwnProfile,
   handleGetAllUsersAdmin,
+  updateAboutSection,
 } = require('../controllers/user')
+const {
+  handleGetPeopleYouMayKnow,
+  handleSendFriendRequest,
+  handleAcceptFriendRequest,
+  handleRejectFriendRequest,
+  handleCancelFriendRequest,
+  handleGetFriendRequests,
+} = require('../controllers/friends')
 
 const router = express.Router()
 
@@ -48,36 +53,44 @@ router.get('/auth/logout', authMiddleware, handleLogout)
 // post related routes
 router.post('/post/add', handleMediaUpload, authMiddleware, handleAddPost)
 
+// post`s comment related routes
+router.post('/post/:postId/comment', authMiddleware, handleAddCommentOnPost)
+
 // this is route when in frontend user moved to its or others profile
 router.get('/post/user/:userId', authMiddleware, handleGetPost)
 router.get('/post/all', authMiddleware, handleGetAllPost)
 router.patch('/post/:postId/like', authMiddleware, handleAddLikeOnPost)
-router.post('/post/:postId/comment', authMiddleware, handleAddCommentOnPost)
+
 
 // Add search route
 router.get('/user/search', authMiddleware, handleUserSearch)
 
+// this api send the people data who are not friends with the current user
+router.get('/user/get-people-you-may-know', authMiddleware, handleGetPeopleYouMayKnow)
+
+//this api is to get the list of the user who sents the friend requests
+router.get('/user/friend-requests', authMiddleware, handleGetFriendRequests)
+
+// User profile related routes
+router.put('/profile/update-about', authMiddleware, updateAboutSection)
+
 // user related routes
 router.get('/user/all', authMiddleware, handleGetAllUsers)
 router.get('/user/:userId', authMiddleware, handleGetUserById)
-router.post('/user/add-friend/:userId', authMiddleware, handleAddFriend)
-router.post(
-  '/user/accept-friend-request/:userId',
-  authMiddleware,
-  handleAcceptFriendRequest
-)
-router.post(
-  '/user/reject-friend-request/:userId',
-  authMiddleware,
-  handleRejectFriendRequest
-)
-router.post(
-  '/user/cancel-friend-request/:userId',
-  authMiddleware,
-  handleCancelFriendRequest
-)
-router.get('/user/friend-requests', authMiddleware, handleGetFriendRequests)
+
+
+router.post('/user/add-friend/:userId', authMiddleware, handleSendFriendRequest)
+
+
+router.post('/user/accept-friend-request/:userId', authMiddleware, handleAcceptFriendRequest)
+router.post('/user/reject-friend-request/:userId', authMiddleware, handleRejectFriendRequest )
+router.post('/user/cancel-friend-request/:userId', authMiddleware, handleCancelFriendRequest)
+
 router.delete('/user/profile', authMiddleware, handleDeleteOwnProfile)
+
+
+// post related routes
+router.post('/post/:postId/repost', authMiddleware, handleRepostsByUser)
 
 // admin routes
 router.get('/admin/users', adminMiddleware, handleGetAllUsersAdmin)
@@ -87,5 +100,7 @@ router.delete('/admin/users/:userId', adminMiddleware, handleDeleteUser)
 
 // Add chat history endpoint
 router.get('/chat/:userId', authMiddleware, getChatHistory)
+
+
 
 module.exports = router
