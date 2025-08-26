@@ -6,6 +6,7 @@ const User = require('../schema/userSchema')
 const cloudinary = require('../config/cloudinary')
 const uploadPostImage = require('../middleware/upload')
 const uploadToCloudinary = require('../utils/cloudinaryUploader')
+const { createNotification } = require('./notifications')
 
 const handleGetPeopleYouMayKnow = async (req, res) => {
   try {
@@ -47,7 +48,7 @@ const handleGetPeopleYouMayKnow = async (req, res) => {
       _id: { $nin: excludedIds },
       isActive: true,
     })
-      .select('fullName image currentRole company receivedFriendRequests')
+      .select('fullName image currentRole company')
       .skip(skip)
       .limit(limit)
 
@@ -66,6 +67,43 @@ const handleGetPeopleYouMayKnow = async (req, res) => {
     return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
       message: 'Something went wrong while fetching suggestions',
+    })
+  }
+}
+
+// get friend requests api function
+const handleGetFriendRequests = async (req, res) => {
+  try {
+    const { userId: authenticatedUserId } = req.user
+
+    if (!authenticatedUserId) {
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({
+        success: false,
+        message: 'You are not authorized',
+      })
+    }
+
+    const currentUser = await User.findById(authenticatedUserId)
+      .populate('receivedFriendRequests', '_id fullName image email')
+      .populate('sentFriendRequests', '_id fullName image email')
+
+    if (!currentUser) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: 'User not found',
+      })
+    }
+
+    return res.status(STATUS_CODES.OK).json({
+      success: true,
+      receivedRequests: currentUser.receivedFriendRequests,
+      sentRequests: currentUser.sentFriendRequests,
+    })
+  } catch (error) {
+    console.error('Error getting friend requests:', error)
+    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Error getting friend requests',
     })
   }
 }
@@ -142,7 +180,7 @@ const handleSendFriendRequest = async (req, res) => {
       })
     }
 
-    // ✅ Transaction (recommended)
+    // ✅ Transaction
     const session = await mongoose.startSession()
     session.startTransaction()
     try {
@@ -159,6 +197,15 @@ const handleSendFriendRequest = async (req, res) => {
     } finally {
       session.endSession()
     }
+
+    // ✅ Create notification
+    await createNotification({
+      recipient: targetUserId,
+      sender: authenticatedUserId,
+      type: 'friend_request',
+      content: `${currentUser.fullName} sent you a friend request`,
+      link: `/profile/${authenticatedUserId}`,
+    })
 
     return res.status(STATUS_CODES.OK).json({
       success: true,
@@ -193,7 +240,6 @@ const handleAcceptFriendRequest = async (req, res) => {
       })
     }
 
-    // Get current user and requester
     const currentUser = await User.findById(authenticatedUserId)
     const requester = await User.findById(requesterId)
 
@@ -204,7 +250,6 @@ const handleAcceptFriendRequest = async (req, res) => {
       })
     }
 
-    // Check if friend request exists
     if (!currentUser.receivedFriendRequests.includes(requesterId)) {
       return res.status(STATUS_CODES.NOT_FOUND).json({
         success: false,
@@ -212,21 +257,29 @@ const handleAcceptFriendRequest = async (req, res) => {
       })
     }
 
-    // Add to connections for both users
+    // Add to connections
     currentUser.connections.push(requesterId)
     requester.connections.push(authenticatedUserId)
 
-    // Remove from friend requests
-    currentUser.receivedFriendRequests =
-      currentUser.receivedFriendRequests.filter(
-        (id) => id.toString() !== requesterId
-      )
+    // Remove from requests
+    currentUser.receivedFriendRequests = currentUser.receivedFriendRequests.filter(
+      (id) => id.toString() !== requesterId
+    )
     requester.sentFriendRequests = requester.sentFriendRequests.filter(
       (id) => id.toString() !== authenticatedUserId
     )
 
     await currentUser.save()
     await requester.save()
+
+    // ✅ Create notification
+    await createNotification({
+      recipient: requesterId,
+      sender: authenticatedUserId,
+      type: 'friend_accept',
+      content: `${currentUser.fullName} accepted your friend request`,
+      link: `/profile/${authenticatedUserId}`,
+    })
 
     return res.status(STATUS_CODES.OK).json({
       success: true,
@@ -261,7 +314,6 @@ const handleRejectFriendRequest = async (req, res) => {
       })
     }
 
-    // Get current user and requester
     const currentUser = await User.findById(authenticatedUserId)
     const requester = await User.findById(requesterId)
 
@@ -272,7 +324,6 @@ const handleRejectFriendRequest = async (req, res) => {
       })
     }
 
-    // Check if friend request exists
     if (!currentUser.receivedFriendRequests.includes(requesterId)) {
       return res.status(STATUS_CODES.NOT_FOUND).json({
         success: false,
@@ -280,17 +331,24 @@ const handleRejectFriendRequest = async (req, res) => {
       })
     }
 
-    // Remove from friend requests
-    currentUser.receivedFriendRequests =
-      currentUser.receivedFriendRequests.filter(
-        (id) => id.toString() !== requesterId
-      )
+    currentUser.receivedFriendRequests = currentUser.receivedFriendRequests.filter(
+      (id) => id.toString() !== requesterId
+    )
     requester.sentFriendRequests = requester.sentFriendRequests.filter(
       (id) => id.toString() !== authenticatedUserId
     )
 
     await currentUser.save()
     await requester.save()
+
+    // ✅ Create notification
+    await createNotification({
+      recipient: requesterId,
+      sender: authenticatedUserId,
+      type: 'friend_reject',
+      content: `${currentUser.fullName} rejected your friend request`,
+      link: `/profile/${authenticatedUserId}`,
+    })
 
     return res.status(STATUS_CODES.OK).json({
       success: true,
@@ -305,7 +363,7 @@ const handleRejectFriendRequest = async (req, res) => {
   }
 }
 
-// cancel friend request api function i.e "I regret sending you the request, so I’m cancelling it."
+// cancel friend request api function
 const handleCancelFriendRequest = async (req, res) => {
   try {
     const { userId: authenticatedUserId } = req.user
@@ -325,7 +383,6 @@ const handleCancelFriendRequest = async (req, res) => {
       })
     }
 
-    // Get current user and target user
     const currentUser = await User.findById(authenticatedUserId)
     const targetUser = await User.findById(targetUserId)
 
@@ -336,7 +393,6 @@ const handleCancelFriendRequest = async (req, res) => {
       })
     }
 
-    // Check if friend request was sent
     if (!currentUser.sentFriendRequests.includes(targetUserId)) {
       return res.status(STATUS_CODES.NOT_FOUND).json({
         success: false,
@@ -344,7 +400,6 @@ const handleCancelFriendRequest = async (req, res) => {
       })
     }
 
-    // Remove from friend requests
     currentUser.sentFriendRequests = currentUser.sentFriendRequests.filter(
       (id) => id.toString() !== targetUserId
     )
@@ -355,6 +410,15 @@ const handleCancelFriendRequest = async (req, res) => {
 
     await currentUser.save()
     await targetUser.save()
+
+    // ✅ Create notification
+    await createNotification({
+      recipient: targetUserId,
+      sender: authenticatedUserId,
+      type: 'system', // or add "friend_cancel" in schema
+      content: `${currentUser.fullName} cancelled the friend request`,
+      link: `/profile/${authenticatedUserId}`,
+    })
 
     return res.status(STATUS_CODES.OK).json({
       success: true,
@@ -369,42 +433,8 @@ const handleCancelFriendRequest = async (req, res) => {
   }
 }
 
-// get friend requests api function
-const handleGetFriendRequests = async (req, res) => {
-  try {
-    const { userId: authenticatedUserId } = req.user
 
-    if (!authenticatedUserId) {
-      return res.status(STATUS_CODES.UNAUTHORIZED).json({
-        success: false,
-        message: 'You are not authorized',
-      })
-    }
 
-    const currentUser = await User.findById(authenticatedUserId)
-      .populate('receivedFriendRequests', '_id fullName image email currentRole')
-      .populate('sentFriendRequests', '_id fullName image email')
-
-    if (!currentUser) {
-      return res.status(STATUS_CODES.NOT_FOUND).json({
-        success: false,
-        message: 'User not found',
-      })
-    }
-
-    return res.status(STATUS_CODES.OK).json({
-      success: true,
-      receivedRequests: currentUser.receivedFriendRequests,
-      sentRequests: currentUser.sentFriendRequests,
-    })
-  } catch (error) {
-    console.error('Error getting friend requests:', error)
-    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
-      success: false,
-      message: 'Error getting friend requests',
-    })
-  }
-}
 
 module.exports = {
   handleGetPeopleYouMayKnow,

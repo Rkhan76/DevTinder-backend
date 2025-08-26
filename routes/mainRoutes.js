@@ -40,6 +40,7 @@ const {
   handleCancelFriendRequest,
   handleGetFriendRequests,
 } = require('../controllers/friends')
+const { getUserNotifications, markAsRead, markAllAsRead, deleteNotification } = require('../controllers/notifications')
 
 const router = express.Router()
 
@@ -104,6 +105,21 @@ router.delete('/admin/users/:userId', adminMiddleware, handleDeleteUser)
 
 // Add chat history endpoint
 router.get('/chat/:userId', authMiddleware, getChatHistory)
+
+//notificatin
+
+
+// ✅ Get  notification list
+router.get('/notifications/get-notifications', authMiddleware, getUserNotifications)
+
+// ✅ Mark a single notification as read
+router.patch('/notifications/mark-as-read/:id', authMiddleware, markAsRead)
+
+// ✅ Mark all notifications as read for logged-in user
+router.patch('/notifications/mark-all-as-read/:userId', authMiddleware, markAllAsRead)
+
+// ✅ Delete a single notification
+router.delete('/notifications/delete/:id', authMiddleware, deleteNotification)
 
 
 
