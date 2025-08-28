@@ -162,7 +162,6 @@ const login = async (req, res) => {
 
 
 const handleGoogleAuthCode = async (req, res) => {
-  console.log('🌐 Handling Google auth code')
 
   const { code } = req.body
   if (!code)
@@ -207,7 +206,6 @@ const handleGoogleAuthCode = async (req, res) => {
         password: null,
       })
 
-      console.log('✅ New user created:', user.email)
     } else {
       console.log('🔁 Existing user:', user.email)
     }

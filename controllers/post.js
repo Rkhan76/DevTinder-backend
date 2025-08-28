@@ -5,6 +5,7 @@ const User = require('../schema/userSchema')
 const cloudinary = require('../config/cloudinary')
 const uploadPostImage = require('../middleware/upload')
 const uploadToCloudinary = require('../utils/cloudinaryUploader')
+const { createNotification } = require('./notifications')
 
 const handleAddPost = async (req, res) => {
   try {
@@ -119,8 +120,6 @@ const handleGetAllPost = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10
     const skip = (page - 1) * limit
 
- console.log('Fetching all posts for user:', userId)
-    console.log(`Fetching posts for page ${page} with limit ${limit} and skip ${skip}`)
 
     const posts = await Post.find({ author: { $ne: userId } })
       .sort({ createdAt: -1 }) // newest first
@@ -135,7 +134,6 @@ const handleGetAllPost = async (req, res) => {
       })
       .lean()
 
-    console.log(posts)
     res.status(STATUS_CODES.OK).json({
       success: true,
       data: posts,
@@ -165,7 +163,6 @@ const handleAddLikeOnPost = async (req, res) => {
     }
 
     const post = await Post.findById(postId)
-
     if (!post) {
       return res.status(STATUS_CODES.NOT_FOUND).json({
         success: false,
@@ -183,6 +180,19 @@ const handleAddLikeOnPost = async (req, res) => {
       // Like
       post.likedBy.push(userId)
       post.likesCount += 1
+
+      // 🔔 Send like notification with user’s name
+      if (String(post.author) !== String(userId)) {
+        const sender = await User.findById(userId).select('fullName')
+        
+        await createNotification({
+          recipient: post.author,
+          sender: userId,
+          type: 'like',
+          content: `${sender.fullName} liked your post`, // ✅ Include name
+          link: `/posts/${post._id}`,
+        })
+      }
     }
 
     await post.save()

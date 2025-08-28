@@ -11,7 +11,6 @@ const { createNotification } = require('./notifications')
 const handleGetPeopleYouMayKnow = async (req, res) => {
   try {
     const { userId: currentUserId } = req.user
-    console.log('Current User ID:', currentUserId)
 
     const currentUser = await User.findById(currentUserId).select(
       'connections sentFriendRequests receivedFriendRequests'

@@ -6,7 +6,6 @@ const getChatHistory = async (req, res) => {
     const userId = req.user.userId;
     const otherUserId = req.params.userId;
 
-    console.log(userId, otherUserId, " userId and otherUserId has fetched here");
     // Find messages where sender/receiver is either user
     const messages = await ChatMessage.find({
       $or: [

@@ -24,7 +24,6 @@ const handleUserSearch = async (req, res) => {
       return res.status(200).json({ success: true, users: [] }) // return empty if no query
     }
 
-    console.log('query', query)
 
     const searchRegex = new RegExp(query, 'i')
 
@@ -36,7 +35,6 @@ const handleUserSearch = async (req, res) => {
       ],
     }).select('_id fullName username image email')
 
-    console.log('users', users)
 
     return res.status(200).json({ success: true, users })
   } catch (error) {

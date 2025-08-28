@@ -47,7 +47,6 @@ const getUserNotifications = async (req, res) => {
 
 // ✅ Mark a single notification as read
 const markAsRead = async (req, res) => {
-  console.log("request has reachend here on markasread")
   try {
     const { id } = req.params
 
