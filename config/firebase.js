@@ -1,11 +1,13 @@
 const admin = require('firebase-admin')
 
-// Prevent re-initializing during hot reloads / multiple imports
+
 if (!admin.apps.length) {
   admin.initializeApp({
-    credential: admin.credential.cert(
-      require('../config/serviceAccountKey.json')
-    ), 
+    credential: admin.credential.cert({
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    }),
   })
 }
 
