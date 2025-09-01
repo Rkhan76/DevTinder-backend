@@ -78,3 +78,8 @@ test-results.xml
 *.swp
 *.swo
 *~
+
+# Firebase Admin SDK service account
+config/serviceAccountKey.json
+serviceAccountKey.json
+firebase-service-account.json

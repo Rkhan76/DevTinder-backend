@@ -6,6 +6,7 @@ const cloudinary = require('../config/cloudinary')
 const uploadPostImage = require('../middleware/upload')
 const uploadToCloudinary = require('../utils/cloudinaryUploader')
 const { createNotification } = require('./notifications')
+const { sendNotification } = require('../utils/notification') // ✅ Import Firebase notification helper
 
 const handleAddPost = async (req, res) => {
   try {
@@ -181,17 +182,33 @@ const handleAddLikeOnPost = async (req, res) => {
       post.likedBy.push(userId)
       post.likesCount += 1
 
-      // 🔔 Send like notification with user’s name
+      // 🔔 Send notification (only if not liking own post)
       if (String(post.author) !== String(userId)) {
         const sender = await User.findById(userId).select('fullName')
-        
+
+        // 1️⃣ Save in DB
         await createNotification({
           recipient: post.author,
           sender: userId,
           type: 'like',
-          content: `${sender.fullName} liked your post`, // ✅ Include name
+          content: `${sender.fullName} liked your post ❤️`,
           link: `/posts/${post._id}`,
+          repost: null,
         })
+
+        // 2️⃣ Send push notification
+        await sendNotification(
+          post.author, // recipientId
+          {
+            title: 'liked',
+            body: `${sender.fullName} liked your post ❤️`,
+          },
+          {
+            type: 'LIKE',
+            postId: post._id.toString(),
+            senderId: userId.toString(),
+          }
+        )
       }
     }
 
@@ -210,6 +227,8 @@ const handleAddLikeOnPost = async (req, res) => {
     })
   }
 }
+
+
 
 const handleAddCommentOnPost = async (req, res) => {
   try {

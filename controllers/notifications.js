@@ -1,4 +1,5 @@
 const Notification = require('../schema/notificationSchema')
+const User = require('../schema/userSchema')
 
 // ✅ Create a new notification
 const createNotification = async ({
@@ -113,10 +114,51 @@ const deleteNotification = async (req, res) => {
   }
 }
 
+
+// Save Firebase Token
+const saveFcmToken = async (req, res) => {
+
+
+  try {
+    const {userId} = req.user // assuming you are using auth middleware (JWT)
+    const { token: fcmToken } = req.body
+
+    
+
+    if (!fcmToken) {
+      return res.status(400).json({ message: 'FCM token is required' })
+    }
+
+    // Update or save the token
+     const user = await User.findByIdAndUpdate(
+       userId,
+       { $addToSet: { fcmTokens: fcmToken } },
+       { new: true }
+     )
+
+
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' })
+    }
+
+    return res.status(200).json({
+      message: 'FCM token saved successfully',
+      fcmToken: user.fcmToken,
+    })
+  } catch (error) {
+    console.error('Error saving FCM token:', error)
+    return res
+      .status(500)
+      .json({ message: 'Server error', error: error.message })
+  }
+}
+
+
 module.exports = {
   createNotification,
   getUserNotifications,
   markAsRead,
   markAllAsRead,
   deleteNotification,
+  saveFcmToken,
 }

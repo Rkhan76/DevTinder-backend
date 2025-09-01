@@ -40,7 +40,7 @@ const {
   handleCancelFriendRequest,
   handleGetFriendRequests,
 } = require('../controllers/friends')
-const { getUserNotifications, markAsRead, markAllAsRead, deleteNotification } = require('../controllers/notifications')
+const { getUserNotifications, markAsRead, markAllAsRead, deleteNotification, saveFcmToken } = require('../controllers/notifications')
 const { getNavbarCounts } = require('../controllers/others')
 
 const router = express.Router()
@@ -108,6 +108,8 @@ router.delete('/admin/users/:userId', adminMiddleware, handleDeleteUser)
 router.get('/chat/:userId', authMiddleware, getChatHistory)
 
 //Notificatin
+
+router.post('/notifications/save-fcm-token', authMiddleware, saveFcmToken)
 
 // ✅ Get  notification list
 router.get('/notifications/get-notifications', authMiddleware, getUserNotifications)

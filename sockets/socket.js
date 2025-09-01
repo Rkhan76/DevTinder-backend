@@ -66,6 +66,12 @@ function initSocket(server) {
     socket.on('stop_typing', ({ sender, receiver }) => {
       io.to(receiver).emit('stop_typing', { sender })
     })
+
+    // ================= COMMENTS =================
+    socket.on('joinPostRoom', (postId) => {
+      socket.join(postId) // each post has a room
+      console.log(`Socket ${socket.id} joined post room ${postId}`)
+    })
   })
 
   return io
