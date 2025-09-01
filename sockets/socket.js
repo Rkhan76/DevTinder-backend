@@ -7,7 +7,7 @@ const onlineUsers = new Map() // key: userId, value: Set of socket ids (if multi
 function initSocket(server) {
   io = new Server(server, {
     cors: {
-      origin: 'http://localhost:5173',
+      origin: '*',
       credentials: true,
     },
   })
