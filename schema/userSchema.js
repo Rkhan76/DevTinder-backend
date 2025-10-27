@@ -1,4 +1,4 @@
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema(
   {
@@ -10,47 +10,73 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/.+\@.+\..+/, 'Please fill a valid email address'],
     },
+
     password: {
       type: String,
-      required: false, // Now optional
+      required: false, // Optional for OAuth users
     },
+
     googleId: {
       type: String,
       unique: true,
-      sparse: true, // Allows multiple null values
+      sparse: true,
     },
+
     fullName: {
       type: String,
+      trim: true,
     },
+
     image: {
       type: String,
     },
+
+    // 🧩 Role-based access
     role: {
       type: String,
-      enum: ['user', 'admin'],
+      enum: ['user', 'admin', 'superadmin'],
       default: 'user',
     },
+
+    // 🧠 For audit trail (who created this account)
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null, // null for self-registration
+    },
+
+    // ✅ Permission flags (optional but useful for fine-grained control)
+    permissions: {
+      canDeleteUsers: { type: Boolean, default: false },
+      canManagePosts: { type: Boolean, default: false },
+      canCreateAdmins: { type: Boolean, default: false },
+    },
+
     isActive: {
       type: Boolean,
       default: true,
     },
+
+    // 🧑‍🤝‍🧑 Connections and Requests
     connections: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: 'User',
       default: [],
     },
+
     sentFriendRequests: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: 'User',
       default: [],
     },
+
     receivedFriendRequests: {
       type: [mongoose.Schema.Types.ObjectId],
       ref: 'User',
       default: [],
     },
 
-    // ✅ New Profile Fields
+    // 📝 Profile Information
     bio: {
       type: String,
       default: '',
@@ -93,23 +119,19 @@ const userSchema = new mongoose.Schema(
   {
     timestamps: true,
   }
-)
+);
 
-// Pre-remove middleware to handle cascading deletes
+// 🧹 Cascade delete middleware
 userSchema.pre('remove', async function (next) {
   try {
-    const Post = mongoose.model('Post')
-    const ChatMessage = mongoose.model('ChatMessage')
+    const Post = mongoose.model('Post');
+    const ChatMessage = mongoose.model('ChatMessage');
 
-    // Delete all posts by this user
-    await Post.deleteMany({ author: this._id })
-
-    // Delete all chat messages where this user is sender or receiver
+    await Post.deleteMany({ author: this._id });
     await ChatMessage.deleteMany({
       $or: [{ sender: this._id }, { receiver: this._id }],
-    })
+    });
 
-    // Remove this user from other users' connections and friend requests
     await mongoose.model('User').updateMany(
       {},
       {
@@ -119,9 +141,8 @@ userSchema.pre('remove', async function (next) {
           receivedFriendRequests: this._id,
         },
       }
-    )
+    );
 
-    // Remove this user from posts' likedBy and bookmarkedBy arrays
     await Post.updateMany(
       {},
       {
@@ -131,24 +152,18 @@ userSchema.pre('remove', async function (next) {
           mentions: this._id,
         },
       }
-    )
+    );
 
-    // Remove comments by this user from posts
     await Post.updateMany(
       { 'comments.user': this._id },
-      {
-        $pull: {
-          comments: { user: this._id },
-        },
-      }
-    )
+      { $pull: { comments: { user: this._id } } }
+    );
 
-    next()
+    next();
   } catch (error) {
-    next(error)
+    next(error);
   }
-})
+});
 
-const User = mongoose.model('User', userSchema)
-
-module.exports = User
+const User = mongoose.model('User', userSchema);
+module.exports = User;

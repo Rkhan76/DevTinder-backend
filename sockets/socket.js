@@ -12,10 +12,13 @@ function initSocket(server) {
     },
   })
 
+  console.log("io ", io);
+
   io.on('connection', (socket) => {
     console.log('🟢 New client connected:', socket.id)
 
     socket.on('join', (userId) => {
+      console.log("userId on socket ", userId);
       socket.userId = userId
       socket.join(userId)
 

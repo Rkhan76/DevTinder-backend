@@ -44,6 +44,7 @@ if (require.main === module) {
         console.log(`Server running on port ${PORT}`);
         console.log('\x1b[36m%s\x1b[0m', `👉  http://localhost:${PORT}`);
     });
+    
     initSocket(server);
 }
 
