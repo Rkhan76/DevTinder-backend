@@ -12,7 +12,7 @@ function initSocket(server) {
     },
   })
 
-  console.log("io ", io);
+ 
 
   io.on('connection', (socket) => {
     console.log('🟢 New client connected:', socket.id)

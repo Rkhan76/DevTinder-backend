@@ -8,6 +8,7 @@ const uploadToCloudinary = require('../utils/cloudinaryUploader')
 const { createNotification } = require('./notifications')
 const { sendNotification } = require('../utils/notification') // ✅ Import Firebase notification helper
 const { getIO } = require('../sockets/socket')
+const { extractHashtags } = require('../utils/FilterTheHashTags')
 
 const handleAddPost = async (req, res) => {
   try {
@@ -39,6 +40,7 @@ const handleAddPost = async (req, res) => {
       author: userId,
       content: safeContent,
       media: mediaArray,
+      tags: extractHashtags(safeContent)
     })
 
     return res.status(STATUS_CODES.CREATED).json({
