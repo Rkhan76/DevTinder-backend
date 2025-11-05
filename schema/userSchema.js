@@ -110,6 +110,10 @@ const userSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    headline: {
+      type: String,
+      default: '',
+    },
 
     fcmTokens: {
       type: [String],

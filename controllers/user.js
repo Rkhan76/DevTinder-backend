@@ -322,6 +322,7 @@ const updateAboutSection = async (req, res) => {
       education,
       location,
       interests,
+      headline
     } = req.body
 
     const updatedUser = await User.findByIdAndUpdate(
@@ -335,6 +336,7 @@ const updateAboutSection = async (req, res) => {
         education,
         location,
         interests,
+        headline
       },
       { new: true, runValidators: true }
     ).select('-password') // exclude sensitive fields

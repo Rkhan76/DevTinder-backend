@@ -80,7 +80,7 @@ const handleGetPost = async (req, res) => {
       .sort({ createdAt: -1 }) // newest first
       .skip(skip)
       .limit(limit)
-      .populate('author', '_id email image fullName') // populate author details
+      .populate('author', '_id email image fullName headline') // populate author details
       .populate('likedBy', '_id fullName image') // populate liked by users
       .populate({
         path: 'comments',
@@ -90,6 +90,8 @@ const handleGetPost = async (req, res) => {
           select: '_id email fullName image'
         }
       })
+
+      console.log("Posts : ", posts)
 
     res.status(STATUS_CODES.OK).json({
       success: true,
@@ -129,14 +131,15 @@ const handleGetAllPost = async (req, res) => {
       .sort({ createdAt: -1 }) // newest first
       .skip(skip)
       .limit(limit)
-      .populate('author', '_id email fullName image') // populate if needed
+      .populate('author', '_id email fullName image headline') // populate if needed
       .populate('likedBy', '_id fullName image')
       .populate({
         path: 'comments.user',
-        select: '_id email fullName image', // include all necessary user fields
+        select: '_id email fullName image headline', // include all necessary user fields
         model: 'User',
       })
       .lean()
+
 
     res.status(STATUS_CODES.OK).json({
       success: true,
