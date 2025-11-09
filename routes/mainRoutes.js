@@ -13,6 +13,7 @@ const {
   handleAddLikeOnPost,
   handleAddCommentOnPost,
   handleRepostsByUser,
+  handleGetSinglePostById,
 } = require('../controllers/post')
 const {
   authMiddleware,
@@ -40,90 +41,90 @@ const {
   handleCancelFriendRequest,
   handleGetFriendRequests,
 } = require('../controllers/friends')
-const { getUserNotifications, markAsRead, markAllAsRead, deleteNotification, saveFcmToken } = require('../controllers/notifications')
+const {
+  getUserNotifications,
+  markAsRead,
+  markAllAsRead,
+  deleteNotification,
+  saveFcmToken,
+} = require('../controllers/notifications')
 const { getNavbarCounts } = require('../controllers/others')
 
 const router = express.Router()
 
-// auth related routes
+// ========== AUTH ROUTES ==========
 router.post('/auth/register', userRegister)
 router.post('/auth/login', login)
 router.post('/auth/google', handleGoogleAuthCode)
 router.get('/auth/check', authMiddleware, handleAuthCheck)
 router.get('/auth/logout', authMiddleware, handleLogout)
 
-// post related routes
+// ========== POST ROUTES (SPECIFIC FIRST) ==========
 router.post('/post/add', handleMediaUpload, authMiddleware, handleAddPost)
-
-// post`s comment related routes
+router.get('/post/all', authMiddleware, handleGetAllPost) // Specific route
+router.get('/post/user/:userId', authMiddleware, handleGetPost) // Specific route
 router.post('/post/:postId/comment', authMiddleware, handleAddCommentOnPost)
-
-// this is route when in frontend user moved to its or others profile
-router.get('/post/user/:userId', authMiddleware, handleGetPost)
-router.get('/post/all', authMiddleware, handleGetAllPost)
+router.post('/post/:postId/repost', authMiddleware, handleRepostsByUser)
 router.patch('/post/:postId/like', authMiddleware, handleAddLikeOnPost)
+// Generic post route LAST
+router.get('/post/:postId', authMiddleware, handleGetSinglePostById)
 
-
-// Add search route
-router.get('/user/search', authMiddleware, handleUserSearch)
-
-// this api send the people data who are not friends with the current user
-router.get('/user/get-people-you-may-know', authMiddleware, handleGetPeopleYouMayKnow)
-
-//this api is to get the list of the user who sents the friend requests
-router.get('/user/friend-requests', authMiddleware, handleGetFriendRequests)
-
-// User profile related routes
-router.put('/profile/update-about', authMiddleware, updateAboutSection)
-
-// user related routes
+// ========== USER ROUTES ==========
 router.get('/user/all', authMiddleware, handleGetAllUsers)
+router.get('/user/search', authMiddleware, handleUserSearch)
 router.get('/user/:userId', authMiddleware, handleGetUserById)
-
-
-router.post('/user/add-friend/:userId', authMiddleware, handleSendFriendRequest)
-
-// api for accept the friend requet
-router.post('/user/accept-friend-request/:userId', authMiddleware, handleAcceptFriendRequest)
-
-// api for reject the friend request by a user
-router.post('/user/reject-friend-request/:userId', authMiddleware, handleRejectFriendRequest )
-
-// api for cancel a friend request
-router.post('/user/cancel-friend-request/:userId', authMiddleware, handleCancelFriendRequest)
-
+router.put('/profile/update-about', authMiddleware, updateAboutSection)
 router.delete('/user/profile', authMiddleware, handleDeleteOwnProfile)
 
+// ========== FRIEND ROUTES ==========
+router.get(
+  '/user/get-people-you-may-know',
+  authMiddleware,
+  handleGetPeopleYouMayKnow
+)
+router.get('/user/friend-requests', authMiddleware, handleGetFriendRequests)
+router.post('/user/add-friend/:userId', authMiddleware, handleSendFriendRequest)
+router.post(
+  '/user/accept-friend-request/:userId',
+  authMiddleware,
+  handleAcceptFriendRequest
+)
+router.post(
+  '/user/reject-friend-request/:userId',
+  authMiddleware,
+  handleRejectFriendRequest
+)
+router.post(
+  '/user/cancel-friend-request/:userId',
+  authMiddleware,
+  handleCancelFriendRequest
+)
 
-// post related routes
-router.post('/post/:postId/repost', authMiddleware, handleRepostsByUser)
+// ========== NOTIFICATION ROUTES ==========
+router.post('/notifications/save-fcm-token', authMiddleware, saveFcmToken)
+router.get(
+  '/notifications/get-notifications',
+  authMiddleware,
+  getUserNotifications
+)
+router.patch('/notifications/mark-as-read/:id', authMiddleware, markAsRead)
+router.patch(
+  '/notifications/mark-all-as-read/:userId',
+  authMiddleware,
+  markAllAsRead
+)
+router.delete('/notifications/delete/:id', authMiddleware, deleteNotification)
 
-// admin routes
+// ========== CHAT ROUTES ==========
+router.get('/chat/:userId', authMiddleware, getChatHistory)
+
+// ========== ADMIN ROUTES ==========
 router.get('/admin/users', adminMiddleware, handleGetAllUsersAdmin)
 router.post('/admin/users', adminMiddleware, handleCreateUser)
 router.put('/admin/users/:userId', adminMiddleware, handleUpdateUser)
 router.delete('/admin/users/:userId', adminMiddleware, handleDeleteUser)
 
-// Add chat history endpoint
-router.get('/chat/:userId', authMiddleware, getChatHistory)
-
-//Notificatin
-
-router.post('/notifications/save-fcm-token', authMiddleware, saveFcmToken)
-
-// ✅ Get  notification list
-router.get('/notifications/get-notifications', authMiddleware, getUserNotifications)
-
-// ✅ Mark a single notification as read
-router.patch('/notifications/mark-as-read/:id', authMiddleware, markAsRead)
-
-// ✅ Mark all notifications as read for logged-in user
-router.patch('/notifications/mark-all-as-read/:userId', authMiddleware, markAllAsRead)
-
-// ✅ Delete a single notification
-router.delete('/notifications/delete/:id', authMiddleware, deleteNotification)
-
-// OTHERS
+// ========== OTHER ROUTES ==========
 router.get('/activity-counts', authMiddleware, getNavbarCounts)
 
 module.exports = router

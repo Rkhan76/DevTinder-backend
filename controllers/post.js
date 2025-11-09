@@ -87,11 +87,31 @@ const handleGetPost = async (req, res) => {
         populate: {
           path: 'user',
           model: 'User',
-          select: '_id email fullName image'
-        }
+          select: '_id email fullName image',
+        },
       })
-
-      console.log("Posts : ", posts)
+      .populate({
+        path: 'repost', // Populate the original post
+        populate: [
+          {
+            path: 'author', // Populate author of the reposted post
+            select: '_id fullName email image headline',
+          },
+          {
+            path: 'likedBy', // Populate likes on that reposted post
+            select: '_id fullName image',
+          },
+          {
+            path: 'comments', // Populate comments in reposted post
+            populate: {
+              path: 'user',
+              model: 'User',
+              select: '_id email fullName image',
+            },
+          },
+        ],
+      })
+      
 
     res.status(STATUS_CODES.OK).json({
       success: true,
@@ -108,6 +128,91 @@ const handleGetPost = async (req, res) => {
     })
   }
 }
+
+const handleGetSinglePostById = async (req, res) => {
+  try {
+    const { userId: authenticatedUserId } = req.user
+    const { postId } = req.params // Changed from userId to postId
+
+    if (!authenticatedUserId) {
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({
+        success: false,
+        message: 'You are not authorized',
+      })
+    }
+
+    if (!postId) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Post ID is required',
+      })
+    }
+
+    const post = await Post.findById(postId)
+      .populate('author', '_id email image fullName headline') // populate author details
+      .populate('likedBy', '_id fullName image') // populate liked by users
+      .populate({
+        path: 'comments',
+        populate: {
+          path: 'user',
+          model: 'User',
+          select: '_id email fullName image',
+        },
+      })
+      .populate({
+        path: 'repost', // Populate the original post
+        populate: [
+          {
+            path: 'author', // Populate author of the reposted post
+            select: '_id fullName email image headline',
+          },
+          {
+            path: 'likedBy', // Populate likes on that reposted post
+            select: '_id fullName image',
+          },
+          {
+            path: 'comments', // Populate comments in reposted post
+            populate: {
+              path: 'user',
+              model: 'User',
+              select: '_id email fullName image',
+            },
+          },
+        ],
+      })
+
+      console.log("Single post by link ", post)
+
+    if (!post) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: 'Post not found',
+      })
+    }
+
+    res.status(STATUS_CODES.OK).json({
+      success: true,
+      data: post, // Single post object instead of array
+    })
+  } catch (err) {
+    console.error('Error fetching post:', err.message)
+
+    if (err.name === 'CastError') {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Invalid post ID format',
+      })
+    }
+
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Something went wrong while fetching the post',
+      error: err.message,
+    })
+  }
+}
+
+
 
 const handleGetAllPost = async (req, res) => {
   try {
@@ -138,7 +243,32 @@ const handleGetAllPost = async (req, res) => {
         select: '_id email fullName image headline', // include all necessary user fields
         model: 'User',
       })
+      .populate({
+        path: 'repost', // Populate the original post
+        populate: [
+          {
+            path: 'author', // Populate author of the reposted post
+            select: '_id fullName email image headline',
+          },
+          {
+            path: 'likedBy', // Populate likes on that reposted post
+            select: '_id fullName image',
+          },
+          {
+            path: 'comments', // Populate comments in reposted post
+            populate: {
+              path: 'user',
+              model: 'User',
+              select: '_id email fullName image',
+            },
+          },
+        ],
+      })
       .lean()
+
+    
+
+      
 
 
     res.status(STATUS_CODES.OK).json({
@@ -322,6 +452,7 @@ const handleAddCommentOnPost = async (req, res) => {
 
 const handleRepostsByUser = async (req, res) => {
   const { postId } = req.params
+  const { message} = req.body
   const { userId } = req.user // from auth middleware
 
   if (!postId || !userId) {
@@ -362,10 +493,27 @@ const handleRepostsByUser = async (req, res) => {
       })
     }
 
+     const safeContent = sanitizePostContent(message)
+     const mediaFiles = req.files?.media || []
+
+     const mediaArray = []
+
+     for (const file of mediaFiles) {
+       try {
+         const uploadedMedia = await uploadToCloudinary(file)
+         mediaArray.push(uploadedMedia)
+       } catch (uploadErr) {
+         console.error('Cloudinary upload error:', uploadErr)
+       }
+     }
+
     // Create a new post that references the original
     const repost = new Post({
       author: userId,
+      content: safeContent,
       repost: postId,
+      media: mediaArray,
+      tags: extractHashtags(safeContent),
       visibility: originalPost.visibility,
       tags: originalPost.tags,
       mentions: originalPost.mentions,
@@ -391,6 +539,11 @@ const handleRepostsByUser = async (req, res) => {
   }
 }
 
+// Function to delete the post by its owner
+const handleDeletePost = async(req, res)=>{
+  
+}
+
 
 module.exports = {
   handleAddPost,
@@ -399,4 +552,5 @@ module.exports = {
   handleAddLikeOnPost,
   handleAddCommentOnPost,
   handleRepostsByUser,
+  handleGetSinglePostById,
 }
