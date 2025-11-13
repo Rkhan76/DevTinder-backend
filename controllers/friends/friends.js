@@ -1,12 +1,12 @@
-const STATUS_CODES = require('../utils/httpStatusCode')
+const STATUS_CODES = require('../../utils/httpStatusCode')
 const mongoose = require('mongoose')
-const { sanitizePostContent } = require('../utils/senatizePostContent')
-const Post = require('../schema/postSchema')
-const User = require('../schema/userSchema')
-const cloudinary = require('../config/cloudinary')
-const uploadPostImage = require('../middleware/upload')
-const uploadToCloudinary = require('../utils/cloudinaryUploader')
-const { createNotification } = require('./notifications')
+const { sanitizePostContent } = require('../../utils/senatizePostContent')
+const Post = require('../../schema/postSchema')
+const User = require('../../schema/userSchema')
+const cloudinary = require('../../config/cloudinary')
+const uploadPostImage = require('../../middleware/upload')
+const uploadToCloudinary = require('../../utils/cloudinaryUploader')
+const { createNotification } = require('../notifications')
 
 const handleGetPeopleYouMayKnow = async (req, res) => {
   try {
@@ -112,6 +112,8 @@ const handleSendFriendRequest = async (req, res) => {
   try {
     const { userId: authenticatedUserId } = req.user
     const { userId: targetUserId } = req.params
+
+    console.log(authenticatedUserId, targetUserId)
 
     if (!authenticatedUserId) {
       return res.status(STATUS_CODES.UNAUTHORIZED).json({
@@ -261,9 +263,10 @@ const handleAcceptFriendRequest = async (req, res) => {
     requester.connections.push(authenticatedUserId)
 
     // Remove from requests
-    currentUser.receivedFriendRequests = currentUser.receivedFriendRequests.filter(
-      (id) => id.toString() !== requesterId
-    )
+    currentUser.receivedFriendRequests =
+      currentUser.receivedFriendRequests.filter(
+        (id) => id.toString() !== requesterId
+      )
     requester.sentFriendRequests = requester.sentFriendRequests.filter(
       (id) => id.toString() !== authenticatedUserId
     )
@@ -330,9 +333,10 @@ const handleRejectFriendRequest = async (req, res) => {
       })
     }
 
-    currentUser.receivedFriendRequests = currentUser.receivedFriendRequests.filter(
-      (id) => id.toString() !== requesterId
-    )
+    currentUser.receivedFriendRequests =
+      currentUser.receivedFriendRequests.filter(
+        (id) => id.toString() !== requesterId
+      )
     requester.sentFriendRequests = requester.sentFriendRequests.filter(
       (id) => id.toString() !== authenticatedUserId
     )
@@ -432,7 +436,62 @@ const handleCancelFriendRequest = async (req, res) => {
   }
 }
 
+const suggestedFriends = async (req, res) => {
+  try {
+    const { userId: currentUserId } = req.user
 
+    // Fetch the current user's connections & friend request lists
+    const currentUser = await User.findById(currentUserId).select(
+      'connections sentFriendRequests receivedFriendRequests'
+    )
+
+    if (!currentUser) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: 'User not found',
+      })
+    }
+
+    // Build exclusion list
+    const excludedIds = [
+      currentUserId,
+      ...currentUser.connections,
+      ...currentUser.sentFriendRequests,
+      ...currentUser.receivedFriendRequests,
+    ]
+
+    // Find suggestions: no pagination, just limit = 10
+    const suggestions = await User.aggregate([
+      {
+        $match: {
+          _id: { $nin: excludedIds },
+          isActive: true,
+        },
+      },
+      { $sample: { size: 10 } }, // randomize & limit 10
+      {
+        $project: {
+          fullName: 1,
+          image: 1,
+          currentRole: 1,
+          headline: 1,
+          company: 1,
+        },
+      },
+    ])
+
+    return res.status(STATUS_CODES.OK).json({
+      success: true,
+      data: suggestions,
+    })
+  } catch (error) {
+    console.error('Error fetching suggested friends:', error)
+    return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Something went wrong while fetching suggested friends',
+    })
+  }
+}
 
 
 module.exports = {
@@ -442,4 +501,5 @@ module.exports = {
   handleRejectFriendRequest,
   handleCancelFriendRequest,
   handleGetFriendRequests,
+  suggestedFriends,
 }

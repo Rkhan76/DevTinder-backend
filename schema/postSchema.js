@@ -96,9 +96,10 @@ const postSchema = new mongoose.Schema(
       ref: 'User',
       default: [],
     },
+
     repost: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Post', 
+      ref: 'Post',
       default: null,
     },
 
@@ -112,11 +113,31 @@ const postSchema = new mongoose.Schema(
       type: [commentSchema],
       default: [],
     },
+
+    // Soft delete fields - MOVED INSIDE the main schema object
+    isDeleted: {
+      type: Boolean,
+      default: false,
+    },
+
+    deletedAt: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: true,
   }
 )
+
+// Add middleware to exclude deleted posts from queries
+postSchema.pre(/^find/, function (next) {
+  // Only include non-deleted posts in regular queries
+  if (!this.getOptions().includeDeleted) {
+    this.where({ isDeleted: false })
+  }
+  next()
+})
 
 const Post = mongoose.model('Post', postSchema)
 module.exports = Post

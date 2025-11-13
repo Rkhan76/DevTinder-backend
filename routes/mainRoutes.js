@@ -1,4 +1,5 @@
 const express = require('express')
+
 const {
   userRegister,
   login,
@@ -6,6 +7,7 @@ const {
   handleAuthCheck,
   handleLogout,
 } = require('../controllers/auth')
+
 const {
   handleAddPost,
   handleGetPost,
@@ -14,14 +16,20 @@ const {
   handleAddCommentOnPost,
   handleRepostsByUser,
   handleGetSinglePostById,
+  handleDeletePost,
+  handleSavePost,
+  handleGetSavedPosts,
 } = require('../controllers/post')
+
 const {
   authMiddleware,
   adminMiddleware,
 } = require('../middleware/authMiddleware')
+
 const { handleMediaUpload } = require('../middleware/upload')
-const ChatMessage = require('../schema/chatSchema')
+
 const { getChatHistory } = require('../controllers/chat')
+
 const {
   handleGetAllUsers,
   handleUserSearch,
@@ -33,6 +41,7 @@ const {
   handleGetAllUsersAdmin,
   updateAboutSection,
 } = require('../controllers/user')
+
 const {
   handleGetPeopleYouMayKnow,
   handleSendFriendRequest,
@@ -40,7 +49,9 @@ const {
   handleRejectFriendRequest,
   handleCancelFriendRequest,
   handleGetFriendRequests,
-} = require('../controllers/friends')
+  suggestedFriends,
+} = require('../controllers/friends/friends')
+
 const {
   getUserNotifications,
   markAsRead,
@@ -48,40 +59,55 @@ const {
   deleteNotification,
   saveFcmToken,
 } = require('../controllers/notifications')
+
 const { getNavbarCounts } = require('../controllers/others')
 
 const router = express.Router()
 
-// ========== AUTH ROUTES ==========
+/* ============================
+   AUTH ROUTES
+============================ */
 router.post('/auth/register', userRegister)
 router.post('/auth/login', login)
 router.post('/auth/google', handleGoogleAuthCode)
 router.get('/auth/check', authMiddleware, handleAuthCheck)
 router.get('/auth/logout', authMiddleware, handleLogout)
 
-// ========== POST ROUTES (SPECIFIC FIRST) ==========
+/* ============================
+   POST ROUTES (specific first)
+============================ */
 router.post('/post/add', handleMediaUpload, authMiddleware, handleAddPost)
-router.get('/post/all', authMiddleware, handleGetAllPost) // Specific route
-router.get('/post/user/:userId', authMiddleware, handleGetPost) // Specific route
+router.get('/post/all', authMiddleware, handleGetAllPost)
+router.get('/post/user/:userId', authMiddleware, handleGetPost)
+
 router.post('/post/:postId/comment', authMiddleware, handleAddCommentOnPost)
 router.post('/post/:postId/repost', authMiddleware, handleRepostsByUser)
 router.patch('/post/:postId/like', authMiddleware, handleAddLikeOnPost)
-// Generic post route LAST
+router.post('/post/:postId/save', authMiddleware, handleSavePost)
+router.delete('/post/:postId', authMiddleware, handleDeletePost)
+
+// must be last post route
 router.get('/post/:postId', authMiddleware, handleGetSinglePostById)
 
-// ========== USER ROUTES ==========
+/* ============================
+   USER ROUTES
+============================ */
 router.get('/user/all', authMiddleware, handleGetAllUsers)
 router.get('/user/search', authMiddleware, handleUserSearch)
-router.get('/user/:userId', authMiddleware, handleGetUserById)
+router.get('/user/saved-posts', authMiddleware, handleGetSavedPosts)
 router.put('/profile/update-about', authMiddleware, updateAboutSection)
 router.delete('/user/profile', authMiddleware, handleDeleteOwnProfile)
 
-// ========== FRIEND ROUTES ==========
+/* ============================
+   FRIEND ROUTES
+   (Must come BEFORE /user/:userId)
+============================ */
 router.get(
   '/user/get-people-you-may-know',
   authMiddleware,
   handleGetPeopleYouMayKnow
 )
+router.get('/user/suggested-friends',authMiddleware, suggestedFriends)
 router.get('/user/friend-requests', authMiddleware, handleGetFriendRequests)
 router.post('/user/add-friend/:userId', authMiddleware, handleSendFriendRequest)
 router.post(
@@ -100,7 +126,14 @@ router.post(
   handleCancelFriendRequest
 )
 
-// ========== NOTIFICATION ROUTES ==========
+/* ============================
+   USER ROUTE (Dynamic last)
+============================ */
+router.get('/user/:userId', authMiddleware, handleGetUserById)
+
+/* ============================
+   NOTIFICATIONS
+============================ */
 router.post('/notifications/save-fcm-token', authMiddleware, saveFcmToken)
 router.get(
   '/notifications/get-notifications',
@@ -115,16 +148,22 @@ router.patch(
 )
 router.delete('/notifications/delete/:id', authMiddleware, deleteNotification)
 
-// ========== CHAT ROUTES ==========
+/* ============================
+   CHAT ROUTES
+============================ */
 router.get('/chat/:userId', authMiddleware, getChatHistory)
 
-// ========== ADMIN ROUTES ==========
+/* ============================
+   ADMIN ROUTES
+============================ */
 router.get('/admin/users', adminMiddleware, handleGetAllUsersAdmin)
 router.post('/admin/users', adminMiddleware, handleCreateUser)
 router.put('/admin/users/:userId', adminMiddleware, handleUpdateUser)
 router.delete('/admin/users/:userId', adminMiddleware, handleDeleteUser)
 
-// ========== OTHER ROUTES ==========
+/* ============================
+   OTHERS
+============================ */
 router.get('/activity-counts', authMiddleware, getNavbarCounts)
 
 module.exports = router

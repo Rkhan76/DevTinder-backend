@@ -181,7 +181,6 @@ const handleGetSinglePostById = async (req, res) => {
         ],
       })
 
-      console.log("Single post by link ", post)
 
     if (!post) {
       return res.status(STATUS_CODES.NOT_FOUND).json({
@@ -539,9 +538,350 @@ const handleRepostsByUser = async (req, res) => {
   }
 }
 
-// Function to delete the post by its owner
-const handleDeletePost = async(req, res)=>{
-  
+// Function to delete the post by its owner (soft delete)
+const handleDeletePost = async (req, res) => {
+  try {
+    const { userId: authenticatedUserId } = req.user
+    const { postId } = req.params
+
+    
+
+    // Validate postId
+    if (!postId) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Post ID is required',
+      })
+    }
+
+    // Check if user is authenticated
+    if (!authenticatedUserId) {
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({
+        success: false,
+        message: 'You are not authorized to perform this action',
+      })
+    }
+
+    // Find the post and include deleted posts for this check
+    const post = await Post.findOne({ _id: postId }).setOptions({
+      includeDeleted: true,
+    })
+
+    // Check if post exists
+    if (!post) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: 'Post not found',
+      })
+    }
+
+    // Check if post is already deleted
+    if (post.isDeleted) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Post is already deleted',
+      })
+    }
+
+    // Convert both IDs to string for comparison
+    const postAuthorId = post.author.toString()
+    const authUserId = authenticatedUserId.toString() // Convert to string
+
+    // Check if user is the author of the post
+    if (postAuthorId !== authUserId) {
+      return res.status(STATUS_CODES.FORBIDDEN).json({
+        success: false,
+        message: 'You can only delete your own posts',
+      })
+    }
+
+    // Soft delete the post
+    const deletedPost = await Post.findByIdAndUpdate(
+      postId,
+      {
+        isDeleted: true,
+        deletedAt: new Date(),
+      },
+      { new: true }
+    )
+
+    console.log('Deleted post:', deletedPost)
+
+    res.status(STATUS_CODES.OK).json({
+      success: true,
+      message: 'Post deleted successfully',
+      data: {
+        postId: deletedPost._id,
+        deletedAt: deletedPost.deletedAt,
+      },
+    })
+  } catch (err) {
+    console.error('Error deleting post:', err.message)
+
+    // Handle invalid ObjectId
+    if (err.name === 'CastError') {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Invalid post ID format',
+      })
+    }
+
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Something went wrong while deleting the post',
+      error: err.message,
+    })
+  }
+}
+
+// Function to restore a soft-deleted post
+const handleRestorePost = async (req, res) => {
+  try {
+    const { userId: authenticatedUserId } = req.user
+    const { postId } = req.params
+
+    const post = await Post.findOne({ _id: postId }).setOptions({ includeDeleted: true })
+
+    if (!post) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: 'Post not found',
+      })
+    }
+
+    if (!post.isDeleted) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Post is not deleted',
+      })
+    }
+
+    if (post.author.toString() !== authenticatedUserId) {
+      return res.status(STATUS_CODES.FORBIDDEN).json({
+        success: false,
+        message: 'You can only restore your own posts',
+      })
+    }
+
+    const restoredPost = await Post.findByIdAndUpdate(
+      postId,
+      {
+        isDeleted: false,
+        deletedAt: null,
+        // Restore original content if you saved it elsewhere
+        // content: post.originalContent,
+      },
+      { new: true }
+    )
+
+    res.status(STATUS_CODES.OK).json({
+      success: true,
+      message: 'Post restored successfully',
+      data: restoredPost,
+    })
+
+  } catch (err) {
+    console.error('Error restoring post:', err.message)
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Something went wrong while restoring the post',
+      error: err.message,
+    })
+  }
+}
+
+// Function to permanently delete a post (hard delete)
+const handlePermanentDeletePost = async (req, res) => {
+  try {
+    const { userId: authenticatedUserId } = req.user
+    const { postId } = req.params
+
+    const post = await Post.findOne({ _id: postId }).setOptions({ includeDeleted: true })
+
+    if (!post) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: 'Post not found',
+      })
+    }
+
+    if (post.author.toString() !== authenticatedUserId) {
+      return res.status(STATUS_CODES.FORBIDDEN).json({
+        success: false,
+        message: 'You can only permanently delete your own posts',
+      })
+    }
+
+    // Permanent deletion
+    await Post.findByIdAndDelete(postId)
+
+    res.status(STATUS_CODES.OK).json({
+      success: true,
+      message: 'Post permanently deleted',
+    })
+
+  } catch (err) {
+    console.error('Error permanently deleting post:', err.message)
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Something went wrong while permanently deleting the post',
+      error: err.message,
+    })
+  }
+}
+
+// Save or unsave a post (toggle functionality)
+const handleSavePost = async (req, res) => {
+  try {
+    const { userId: authenticatedUserId } = req.user
+    const { postId } = req.params
+
+    // Validate inputs
+    if (!postId) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Post ID is required',
+      })
+    }
+
+    if (!authenticatedUserId) {
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({
+        success: false,
+        message: 'You are not authorized to perform this action',
+      })
+    }
+
+    // Find the post
+    const post = await Post.findById(postId)
+    if (!post) {
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: 'Post not found',
+      })
+    }
+
+    // Check if post is deleted
+    if (post.isDeleted) {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Cannot save a deleted post',
+      })
+    }
+
+    const user = await User.findById(authenticatedUserId)
+    const isAlreadySaved = user.savedPosts.includes(postId)
+
+    let savedPost
+    let message
+
+    if (isAlreadySaved) {
+      // Unsave the post
+      await User.findByIdAndUpdate(
+        authenticatedUserId,
+        { $pull: { savedPosts: postId } }
+      )
+      
+      await Post.findByIdAndUpdate(
+        postId,
+        { $pull: { bookmarkedBy: authenticatedUserId } }
+      )
+
+      message = 'Post unsaved successfully'
+    } else {
+      // Save the post
+      await User.findByIdAndUpdate(
+        authenticatedUserId,
+        { $addToSet: { savedPosts: postId } } // $addToSet prevents duplicates
+      )
+      
+      await Post.findByIdAndUpdate(
+        postId,
+        { $addToSet: { bookmarkedBy: authenticatedUserId } }
+      )
+
+      message = 'Post saved successfully'
+    }
+
+    // Get updated post and user info
+    const updatedPost = await Post.findById(postId)
+    const updatedUser = await User.findById(authenticatedUserId).populate('savedPosts')
+
+    res.status(STATUS_CODES.OK).json({
+      success: true,
+      message,
+      data: {
+        isSaved: !isAlreadySaved,
+        savesCount: updatedPost.bookmarkedBy.length,
+        savedPosts: updatedUser.savedPosts
+      }
+    })
+
+  } catch (err) {
+    console.error('Error saving post:', err.message)
+
+    if (err.name === 'CastError') {
+      return res.status(STATUS_CODES.BAD_REQUEST).json({
+        success: false,
+        message: 'Invalid post ID format',
+      })
+    }
+
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Something went wrong while saving the post',
+      error: err.message,
+    })
+  }
+}
+
+// Get all saved posts for a user
+const handleGetSavedPosts = async (req, res) => {
+  try {
+    const { userId: authenticatedUserId } = req.user
+
+    if (!authenticatedUserId) {
+      return res.status(STATUS_CODES.UNAUTHORIZED).json({
+        success: false,
+        message: 'You are not authorized',
+      })
+    }
+
+    const user = await User.findById(authenticatedUserId)
+      .populate({
+        path: 'savedPosts',
+        populate: [
+          {
+            path: 'author',
+            select: '_id fullName email image headline'
+          },
+          {
+            path: 'likedBy',
+            select: '_id fullName image'
+          },
+          {
+            path: 'comments.user',
+            select: '_id fullName image'
+          }
+        ]
+      })
+
+    // Filter out deleted posts (in case they were saved before deletion)
+    const validSavedPosts = user.savedPosts.filter(post => !post.isDeleted)
+
+    res.status(STATUS_CODES.OK).json({
+      success: true,
+      data: validSavedPosts,
+      count: validSavedPosts.length
+    })
+
+  } catch (err) {
+    console.error('Error fetching saved posts:', err.message)
+    res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      message: 'Something went wrong while fetching saved posts',
+      error: err.message,
+    })
+  }
 }
 
 
@@ -553,4 +893,6 @@ module.exports = {
   handleAddCommentOnPost,
   handleRepostsByUser,
   handleGetSinglePostById,
+  handleDeletePost,
+  handleSavePost,
 }

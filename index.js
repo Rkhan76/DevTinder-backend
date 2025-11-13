@@ -13,7 +13,7 @@ const { initSocket } = require('./sockets/socket');
 
 const app = express()
 
-const mainRoutes = require('./routes/mainRoutes')
+const mainRoutes = require('./routes/index')
 
 // Remove allowedOrigins and allow all origins for CORS
 app.use(
