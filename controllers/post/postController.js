@@ -3,30 +3,81 @@ const STATUS_CODES = require('../../utils/httpStatusCode')
 const { sanitizePostContent } = require('../../utils/senatizePostContent')
 const Post = require('../../schema/postSchema')
 const { extractHashtags } = require('../../utils/FilterTheHashTags')
-const uploadToCloudinary = require('../../utils/cloudinaryUploader')
+const TempMedia = require('../../schema/tempMediaSchema')
+
+// const handleAddPost = async (req, res) => {
+//   try {
+//     const { content } = req.body
+//     const { userId } = req.user
+
+//     if (!userId || !content) {
+//       return res.status(STATUS_CODES.BAD_REQUEST).json({
+//         success: false,
+//         message: 'Please provide valid input',
+//       })
+//     }
+
+//     const safeContent = sanitizePostContent(content)
+//     const mediaFiles = req.files?.media || []
+//     const mediaArray = []
+
+//     for (const file of mediaFiles) {
+//       try {
+//         const uploadedMedia = await uploadToCloudinary(file)
+//         mediaArray.push(uploadedMedia)
+//       } catch (uploadErr) {
+//         console.error('Cloudinary upload error:', uploadErr)
+//       }
+//     }
+
+//     const newPost = await Post.create({
+//       author: userId,
+//       content: safeContent,
+//       media: mediaArray,
+//       tags: extractHashtags(safeContent),
+//     })
+
+//     return res.status(STATUS_CODES.CREATED).json({
+//       success: true,
+//       message: 'Post created successfully',
+//       post: newPost,
+//     })
+//   } catch (error) {
+//     console.error('Error while creating post:', error)
+//     return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
+//       success: false,
+//       message: 'Something went wrong while creating the post',
+//     })
+//   }
+// }
+
+
 
 const handleAddPost = async (req, res) => {
   try {
-    const { content } = req.body
+    const { content, mediaId } = req.body
     const { userId } = req.user
 
     if (!userId || !content) {
       return res.status(STATUS_CODES.BAD_REQUEST).json({
         success: false,
-        message: 'Please provide valid input',
+        message: 'Invalid input',
       })
     }
 
     const safeContent = sanitizePostContent(content)
-    const mediaFiles = req.files?.media || []
-    const mediaArray = []
 
-    for (const file of mediaFiles) {
-      try {
-        const uploadedMedia = await uploadToCloudinary(file)
-        mediaArray.push(uploadedMedia)
-      } catch (uploadErr) {
-        console.error('Cloudinary upload error:', uploadErr)
+    let mediaArray = []
+
+    if (mediaId) {
+      const temp = await TempMedia.findById(mediaId)
+
+      if (temp) {
+        mediaArray.push({
+          url: temp.url,
+          type: temp.type,
+        })
+        await temp.deleteOne() // Move from temp → final
       }
     }
 
@@ -43,13 +94,15 @@ const handleAddPost = async (req, res) => {
       post: newPost,
     })
   } catch (error) {
-    console.error('Error while creating post:', error)
+    console.error('Post creation error:', error)
     return res.status(STATUS_CODES.INTERNAL_SERVER_ERROR).json({
       success: false,
-      message: 'Something went wrong while creating the post',
+      message: 'Something went wrong',
     })
   }
 }
+
+
 
 const handleGetPost = async (req, res) => {
   try {
