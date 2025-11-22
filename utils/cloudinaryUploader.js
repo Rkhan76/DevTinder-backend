@@ -25,4 +25,8 @@ const uploadToCloudinary = (file) => {
   })
 }
 
-module.exports = uploadToCloudinary
+// ⭐ Export BOTH cloudinary instance & uploader
+module.exports = {
+  cloudinary,
+  uploadToCloudinary,
+}

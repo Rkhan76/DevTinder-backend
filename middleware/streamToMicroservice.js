@@ -26,14 +26,13 @@ const streamToMicroservice = async (req, res, next) => {
         if (!fileProcessingStarted) {
           fileProcessingStarted = true
           console.log('🟢 First chunk received - starting axios request')
-          startAxiosRequest() // Start axios when first data arrives
+          startAxiosRequest()
         }
         fileBytes += chunk.length
         console.log(
           `📥 File stream: ${chunk.length} bytes, Total: ${fileBytes}`
         )
 
-        // Write to passThrough stream
         if (passThroughStream && !passThroughStream.destroyed) {
           passThroughStream.write(chunk)
         }
@@ -57,7 +56,6 @@ const streamToMicroservice = async (req, res, next) => {
 
     bb.on('finish', () => {
       console.log('🎉 BUSBOY.FINISH: Form parsing completed')
-      // If no file was processed, reject
       if (!passThroughStream) {
         res.status(400).json({ success: false, message: 'No file uploaded' })
         reject(new Error('No file'))
@@ -84,24 +82,29 @@ const streamToMicroservice = async (req, res, next) => {
           data: passThroughStream,
           maxBodyLength: Infinity,
           maxContentLength: Infinity,
-          timeout: 300000,
-          // Important: Tell axios this is a stream
-          responseType: 'stream',
+          timeout: 600000,
+          responseType: 'json',
         })
 
         console.log('✅ Microservice response received')
-        req.optimizedMediaUrl = response.data.url
-        req.optimizedMediaType = fileMimeType.startsWith('video')
-          ? 'video'
-          : 'image'
+
+        // Store full metadata
+        req.optimizedMediaData = {
+          url: response.data.url,
+          publicId: response.data.publicId,
+          playbackUrl: response.data.playbackUrl,
+          type: response.data.type,
+          width: response.data.width,
+          height: response.data.height,
+          format: response.data.format,
+          bytes: response.data.bytes,
+          duration: response.data.duration,
+        }
+
         next()
         resolve()
       } catch (err) {
         console.error('❌ Microservice error:', err.message)
-        if (err.response) {
-          console.error('Response status:', err.response.status)
-          console.error('Response data:', err.response.data)
-        }
         res.status(500).json({ success: false, message: 'Processing failed' })
         reject(err)
       }

@@ -58,6 +58,9 @@ const handleAddPost = async (req, res) => {
     const { content, mediaId } = req.body
     const { userId } = req.user
 
+    console.log("content ", content)
+    console.log("mediaId ", mediaId)
+
     if (!userId || !content) {
       return res.status(STATUS_CODES.BAD_REQUEST).json({
         success: false,
@@ -88,6 +91,7 @@ const handleAddPost = async (req, res) => {
       tags: extractHashtags(safeContent),
     })
 
+    console.log("newPost ", newPost)
     return res.status(STATUS_CODES.CREATED).json({
       success: true,
       message: 'Post created successfully',
