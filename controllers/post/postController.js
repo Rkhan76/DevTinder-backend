@@ -55,7 +55,7 @@ const TempMedia = require('../../schema/tempMediaSchema')
 
 const handleAddPost = async (req, res) => {
   try {
-    const { content, mediaId } = req.body
+    const { content, tempMediaId: mediaId } = req.body
     const { userId } = req.user
 
     console.log("content ", content)
@@ -75,12 +75,14 @@ const handleAddPost = async (req, res) => {
     if (mediaId) {
       const temp = await TempMedia.findById(mediaId)
 
+      console.log(temp, " Temp file")
+
       if (temp) {
         mediaArray.push({
           url: temp.url,
           type: temp.type,
         })
-        await temp.deleteOne() // Move from temp → final
+        await temp.deleteOne()
       }
     }
 
@@ -91,7 +93,7 @@ const handleAddPost = async (req, res) => {
       tags: extractHashtags(safeContent),
     })
 
-    console.log("newPost ", newPost)
+ 
     return res.status(STATUS_CODES.CREATED).json({
       success: true,
       message: 'Post created successfully',
