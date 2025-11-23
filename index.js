@@ -5,6 +5,8 @@ const cookieParser = require('cookie-parser')
 const multer = require('multer')
 const swaggerUi = require('swagger-ui-express')
 const swaggerDocument = require('./swagger-output.json')
+require('./cron/cleanupTempMedia')
+
 
 
 
