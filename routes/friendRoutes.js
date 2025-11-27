@@ -9,6 +9,7 @@ const {
   handleCancelFriendRequest,
   handleGetFriendRequests,
   suggestedFriends,
+  getFriendsByIds,
 } = require('../controllers/friends/friends')
 
 const { authMiddleware } = require('../middleware/authMiddleware')
@@ -36,4 +37,6 @@ router.post(
   handleCancelFriendRequest
 )
 
+// Get the list of the friend
+router.post('friendlist/by-ids', authMiddleware, getFriendsByIds)
 module.exports = router

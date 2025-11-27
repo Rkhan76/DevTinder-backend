@@ -493,6 +493,42 @@ const suggestedFriends = async (req, res) => {
   }
 }
 
+const getFriendsByIds = async (req, res) => {
+  try {
+    const { userIds } = req.body
+
+    if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'userIds array is required',
+      })
+    }
+
+    const users = await User.find(
+      { _id: { $in: userIds } },
+      {
+        fullName: 1,
+        image: 1,
+        headline: 1,
+        currentCompany: 1,
+        currentRole: 1,
+        location: 1,
+      }
+    )
+
+    return res.json({
+      success: true,
+      users,
+    })
+  } catch (err) {
+    console.error('Fetch users by IDs error:', err)
+    return res.status(500).json({
+      success: false,
+      message: 'Server error',
+    })
+  }
+}
+
 
 module.exports = {
   handleGetPeopleYouMayKnow,
@@ -502,4 +538,5 @@ module.exports = {
   handleCancelFriendRequest,
   handleGetFriendRequests,
   suggestedFriends,
+  getFriendsByIds,
 }

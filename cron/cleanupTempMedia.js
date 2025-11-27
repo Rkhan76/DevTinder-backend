@@ -3,7 +3,7 @@ const TempMedia = require('../schema/tempMediaSchema')
 const cloudinary = require('../config/cloudinary')
 
 // Every 1 minute
-cron.schedule('*/1 * * * *', async () => {
+cron.schedule('*/20 * * * *', async () => {
   console.log('🧹 Running temp media cleanup...')
 
   try {
