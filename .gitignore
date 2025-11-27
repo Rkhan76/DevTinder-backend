@@ -70,6 +70,10 @@ uploads/
 storage/
 media/
 
+# Allow backend media controllers
++!controllers/media/
++!controllers/media/*.js
+
 # Testing
 junit.xml
 test-results.xml
