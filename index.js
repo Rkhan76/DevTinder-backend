@@ -20,7 +20,12 @@ const mainRoutes = require('./routes/index')
 // Remove allowedOrigins and allow all origins for CORS
 app.use(
   cors({
-    origin: ['https://dev-tinder-frontend-theta.vercel.app', 'http://localhost:5173'], // Allow all origins
+    origin: [
+      'http://localhost:5173',
+      'https://dev-tinder-frontend-theta.vercel.app',
+      'https://dev-tinder-frontend-git-main-rkhan76s-projects.vercel.app',
+      'https://dev-tinder-frontend-5cahgodhg-rkhan76s-projects.vercel.app',
+    ], // Allow all origins
     credentials: true, // Allow cookies and auth headers
   })
 )
